@@ -4,7 +4,7 @@ use wide::{u32x4, u32x8};
 
 use self::mod_int::ModInt998244353;
 
-mod mod_int;
+pub mod mod_int;
 mod ntt;
 
 /// 音声データのベクトル.
@@ -115,10 +115,15 @@ impl AudioVec {
     }
 
     #[inline]
-    pub fn delay(&mut self, time: usize) {
-        let mut new = vec![Default::default(); time];
-        new.append(&mut self.vec);
-        self.vec = new;
+    pub fn delay(&mut self, time: isize) {
+        if 0 <= time {
+            let time = time as usize;
+            let mut new = vec![Default::default(); time];
+            new.append(&mut self.vec);
+            self.vec = new;
+        } else {
+            self.vec = self.vec[(-time) as usize..].to_vec();
+        }
     }
 
     #[inline]
