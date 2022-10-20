@@ -10,6 +10,7 @@ pub type ModInt998244353 = ModInt<998244353, 3296722945>;
 
 /// MOD を法とした整数. MOD.wrapping_mul(MOD_INV) が 1 でなければならない.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[repr(transparent)]
 pub struct ModInt<const MOD: u32, const MOD_INV: u32>(u32);
 
 impl<const MOD: u32, const MOD_INV: u32> From<ModInt<MOD, MOD_INV>> for u32 {
@@ -32,8 +33,13 @@ impl<const MOD: u32, const MOD_INV: u32> ModInt<MOD, MOD_INV> {
     }
 
     #[inline]
-    pub fn modulo(&self) -> u32 {
+    pub const fn modulo() -> u32 {
         MOD
+    }
+
+    #[inline]
+    pub const fn modulo_inv() -> u32 {
+        MOD_INV
     }
 
     #[inline]

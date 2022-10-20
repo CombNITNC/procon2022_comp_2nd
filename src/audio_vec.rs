@@ -1,3 +1,7 @@
+use std::ops::{Index, IndexMut};
+
+use wide::{u32x4, u32x8};
+
 use self::mod_int::ModInt998244353;
 
 mod mod_int;
@@ -8,6 +12,21 @@ mod ntt;
 pub struct AudioVec {
     /// 最初の時刻が一番最後の要素になるように格納される.
     vec: Vec<ModInt998244353>,
+}
+
+impl Index<usize> for AudioVec {
+    type Output = ModInt998244353;
+
+    #[inline]
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.vec[index]
+    }
+}
+impl IndexMut<usize> for AudioVec {
+    #[inline]
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        &mut self.vec[index]
+    }
 }
 
 impl AudioVec {
@@ -29,6 +48,42 @@ impl AudioVec {
     #[inline]
     pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut ModInt998244353> {
         self.vec.iter_mut()
+    }
+
+    #[inline]
+    pub fn get_u32x4(&self, idx: usize) -> u32x4 {
+        u32x4::new([
+            self.vec[idx].as_u32(),
+            self.vec[idx + 1].as_u32(),
+            self.vec[idx + 2].as_u32(),
+            self.vec[idx + 3].as_u32(),
+        ])
+    }
+
+    #[inline]
+    pub fn set_u32x4(&mut self, idx: usize, val: u32x4) {
+        let arr = val.to_array().map(ModInt998244353::new);
+        self.vec[idx..idx + 4].copy_from_slice(&arr)
+    }
+
+    #[inline]
+    pub fn get_u32x8(&self, idx: usize) -> u32x8 {
+        u32x8::new([
+            self.vec[idx].as_u32(),
+            self.vec[idx + 1].as_u32(),
+            self.vec[idx + 2].as_u32(),
+            self.vec[idx + 3].as_u32(),
+            self.vec[idx + 4].as_u32(),
+            self.vec[idx + 5].as_u32(),
+            self.vec[idx + 6].as_u32(),
+            self.vec[idx + 7].as_u32(),
+        ])
+    }
+
+    #[inline]
+    pub fn set_u32x8(&mut self, idx: usize, val: u32x8) {
+        let arr = val.to_array().map(|v| ModInt998244353::new(v));
+        (&mut self.vec[idx..idx + 8]).copy_from_slice(&arr)
     }
 }
 
@@ -85,7 +140,7 @@ impl AudioVec {
     }
 
     #[inline]
-    pub fn convolution(&self, other: &Self) -> Self {
+    pub fn convolution(&self, other: &Self, ntt: &ntt::Ntt) -> Self {
         if self.is_empty() && other.is_empty() {
             return Self::default();
         }
@@ -109,12 +164,12 @@ impl AudioVec {
         buf2.resize(buf_len);
 
         // 畳み込み計算は数論変換してから乗算して逆数論変換する
-        ntt::ntt(&mut buf1.vec);
-        ntt::ntt(&mut buf2.vec);
+        ntt.transform(&mut buf1);
+        ntt.transform(&mut buf2);
         for (elem1, elem2) in buf1.iter_mut().zip(buf2.iter_mut()) {
             *elem1 *= *elem2;
         }
-        ntt::inverse_ntt(&mut buf1.vec);
+        ntt.inverse_transform(&mut buf1);
 
         // 数論変換で変化した定数倍を戻す
         let inv = ModInt998244353::new(buf_len as u32).inv();
