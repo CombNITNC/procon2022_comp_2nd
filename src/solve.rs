@@ -2,9 +2,13 @@ use std::collections::HashMap;
 
 use crate::audio_vec::{mod_int::ModInt998244353, ntt::Ntt, AudioVec};
 
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+use self::card_voice::CardVoiceIndex;
+
+pub mod card_voice;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct InspectPoint {
-    pub using_voice: usize,
+    pub using_voice: CardVoiceIndex,
     pub delay: isize,
 }
 
@@ -12,19 +16,19 @@ pub struct InspectPoint {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Loss {
     /// 88 個の読み札の読み上げ音声
-    card_voices: Vec<AudioVec>,
+    card_voices: HashMap<CardVoiceIndex, AudioVec>,
     partial_card_voice_norm: HashMap<InspectPoint, ModInt998244353>,
     /// 数論変換のための前計算オブジェクト
     ntt: Ntt,
 }
 
 impl Loss {
-    pub fn new(card_voices: Vec<AudioVec>, problem_voice_len: usize) -> Self {
+    pub fn new(card_voices: HashMap<CardVoiceIndex, AudioVec>, problem_voice_len: usize) -> Self {
         let mut partial_card_voice_norm = HashMap::new();
-        for (using, voice) in card_voices.iter().enumerate() {
+        for (&using, voice) in card_voices.iter() {
             let voice_len = voice.len() as isize;
             for delay in -voice_len..problem_voice_len as isize {
-                let delayed = card_voices[using].delayed(delay);
+                let delayed = voice.delayed(delay);
                 partial_card_voice_norm.insert(
                     InspectPoint {
                         using_voice: using,
@@ -48,7 +52,7 @@ impl Loss {
     pub fn evaluate(&self, problem_voice: &AudioVec, point: InspectPoint) -> u32 {
         (problem_voice.squared_norm()
             - ModInt998244353::new(2)
-                * problem_voice.convolution(&self.card_voices[point.using_voice], &self.ntt)
+                * problem_voice.convolution(&self.card_voices[&point.using_voice], &self.ntt)
                     [point.delay as usize]
             + self.partial_card_voice_norm[&InspectPoint {
                 delay: problem_voice.len() as isize - point.delay - 1,
@@ -66,8 +70,7 @@ impl Loss {
             let mut points: Vec<_> = self
                 .card_voices
                 .iter()
-                .enumerate()
-                .flat_map(|(using, card_voice)| {
+                .flat_map(|(&using, card_voice)| {
                     (-(card_voice.len() as isize)..problem_voice.len() as isize).map(move |delay| {
                         InspectPoint {
                             using_voice: using,
@@ -107,7 +110,7 @@ impl Loss {
         let mut composed = AudioVec::default();
         composed.resize(problem_voice.len());
         for &InspectPoint { using_voice, delay } in first_answer {
-            composed.add_assign(&self.card_voices[using_voice].delayed(delay));
+            composed.add_assign(&self.card_voices[&using_voice].delayed(delay));
         }
         const THRESHOLD: u32 = 100;
         problem_voice.sub(&composed).squared_norm().as_u32() < THRESHOLD
