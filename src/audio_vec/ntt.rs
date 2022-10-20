@@ -7,6 +7,7 @@ mod montgomery;
 /// 変換可能な成分の最高次数.
 const LEVEL: usize = 998244352usize.trailing_zeros() as usize;
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Ntt {
     primitive_root: ModInt998244353,
     d_w: [ModInt998244353; LEVEL],
