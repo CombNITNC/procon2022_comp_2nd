@@ -105,6 +105,23 @@ impl AudioVec {
     }
 
     #[inline]
+    pub fn sub(&self, other: &Self) -> Self {
+        if self.len() < other.len() {
+            return other.add(self);
+        }
+        let mut cloned = self.clone();
+        cloned.sub_assign(other);
+        cloned
+    }
+
+    #[inline]
+    pub fn sub_assign(&mut self, other: &Self) {
+        for (write, to_add) in self.iter_mut().zip(other.iter()) {
+            *write -= *to_add;
+        }
+    }
+
+    #[inline]
     pub fn inner_cross(&self, other: &Self) -> ModInt998244353 {
         self.iter().zip(other.iter()).map(|(&a, &b)| a * b).sum()
     }
