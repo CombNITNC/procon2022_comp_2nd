@@ -1,12 +1,19 @@
 use std::{collections::HashMap, fs::File, io, path::PathBuf};
 
-use self::{audio_vec::AudioVec, solve::card_voice::CardVoiceIndex};
+use self::{audio_vec::AudioVec, request::net::NetRequester, solve::card_voice::CardVoiceIndex};
 
 mod audio_vec;
+mod request;
 mod solve;
 
-fn main() -> io::Result<()> {
+fn main() -> anyhow::Result<()> {
+    dotenv::dotenv()?;
+
+    let endpoint = std::env::var("ENDPOINT")?;
+    let token = std::env::var("TOKEN")?;
+
     let all_jk = load_all_jk()?;
+    let requester = NetRequester::new(&endpoint, &token);
 
     Ok(())
 }
