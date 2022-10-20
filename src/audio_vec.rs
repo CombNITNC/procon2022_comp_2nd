@@ -10,7 +10,6 @@ mod ntt;
 /// 音声データのベクトル.
 #[derive(Debug, Default, Clone, PartialEq, Eq, Hash)]
 pub struct AudioVec {
-    /// 最初の時刻が一番最後の要素になるように格納される.
     vec: Vec<ModInt998244353>,
 }
 
@@ -82,8 +81,8 @@ impl AudioVec {
 
     #[inline]
     pub fn set_u32x8(&mut self, idx: usize, val: u32x8) {
-        let arr = val.to_array().map(|v| ModInt998244353::new(v));
-        (&mut self.vec[idx..idx + 8]).copy_from_slice(&arr)
+        let arr = val.to_array().map(ModInt998244353::new);
+        self.vec[idx..idx + 8].copy_from_slice(&arr)
     }
 }
 
@@ -117,7 +116,9 @@ impl AudioVec {
 
     #[inline]
     pub fn delay(&mut self, time: usize) {
-        self.vec.append(&mut vec![Default::default(); time]);
+        let mut new = vec![Default::default(); time];
+        new.append(&mut self.vec);
+        self.vec = new;
     }
 
     #[inline]
