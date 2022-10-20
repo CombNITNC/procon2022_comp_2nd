@@ -179,3 +179,17 @@ impl AudioVec {
         buf1
     }
 }
+
+impl AudioVec {
+    #[inline]
+    pub fn from_pcm(path: &[u16]) -> Self {
+        // プリエンファシス
+        let emphasized = path.windows(2).map(|win| {
+            ModInt998244353::new((win[0] as i32 + 40 * (win[1] as i32 - win[0] as i32)) as u32)
+        });
+
+        Self {
+            vec: emphasized.collect(),
+        }
+    }
+}
