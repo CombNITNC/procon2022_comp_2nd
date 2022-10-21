@@ -49,13 +49,13 @@ pub enum Error {
     #[error("invalid token")]
     InvalidToken,
     #[error("the match not started")]
-    AccessTimeError,
+    AccessTime,
     #[error("invalid request format")]
-    FormatError,
+    Format,
     #[error("file {0} not found")]
     NotFound(String),
     #[error("request body was too large")]
-    TooLargeRequestError,
+    TooLargeRequest,
     #[error("unknown http error: {0}")]
     Unknown(StatusCode),
 }

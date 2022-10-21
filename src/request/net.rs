@@ -42,7 +42,7 @@ impl Requester for NetRequester {
         if status.is_client_error() || status.is_server_error() {
             return Err(match res.text()?.as_str().trim() {
                 "InvalidToken" => Error::InvalidToken,
-                "AccessTimeError" => Error::AccessTimeError,
+                "AccessTimeError" => Error::AccessTime,
                 _ => Error::Unknown(status),
             }
             .into());
@@ -60,7 +60,7 @@ impl Requester for NetRequester {
         if status.is_client_error() || status.is_server_error() {
             return Err(match res.text()?.as_str().trim() {
                 "InvalidToken" => Error::InvalidToken,
-                "AccessTimeError" => Error::AccessTimeError,
+                "AccessTimeError" => Error::AccessTime,
                 _ => Error::Unknown(status),
             }
             .into());
@@ -80,8 +80,8 @@ impl Requester for NetRequester {
         if status.is_client_error() || status.is_server_error() {
             return Err(match res.text()?.as_str().trim() {
                 "InvalidToken" => Error::InvalidToken,
-                "AccessTimeError" => Error::AccessTimeError,
-                "FormatError" => Error::FormatError,
+                "AccessTimeError" => Error::AccessTime,
+                "FormatError" => Error::Format,
                 _ => Error::Unknown(status),
             }
             .into());
@@ -95,7 +95,7 @@ impl Requester for NetRequester {
                 if status.is_client_error() || status.is_server_error() {
                     return Err(match res.text()?.as_str().trim() {
                         "InvalidToken" => Error::InvalidToken,
-                        "AccessTimeError" => Error::AccessTimeError,
+                        "AccessTimeError" => Error::AccessTime,
                         "NotFound" => Error::NotFound(chunk),
                         _ => Error::Unknown(status),
                     }
@@ -122,9 +122,9 @@ impl Requester for NetRequester {
         if status.is_client_error() || status.is_server_error() {
             return Err(match res.text()?.as_str().trim() {
                 "InvalidToken" => Error::InvalidToken,
-                "AccessTimeError" => Error::AccessTimeError,
-                "FormatError" => Error::FormatError,
-                "TooLargeRequestError" => Error::TooLargeRequestError,
+                "AccessTimeError" => Error::AccessTime,
+                "FormatError" => Error::Format,
+                "TooLargeRequestError" => Error::TooLargeRequest,
                 _ => Error::Unknown(status),
             }
             .into());
