@@ -1,4 +1,5 @@
 use anyhow::Result;
+use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -55,6 +56,8 @@ pub enum Error {
     NotFound(String),
     #[error("request body was too large")]
     TooLargeRequestError,
+    #[error("unknown http error: {0}")]
+    Unknown(StatusCode),
 }
 
 pub trait Requester {

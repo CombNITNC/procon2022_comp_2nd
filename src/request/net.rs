@@ -8,7 +8,7 @@ use reqwest::{
 
 use crate::audio_vec::AudioVec;
 
-use super::Requester;
+use super::{Error, Requester};
 
 pub struct NetRequester {
     endpoint: Url,
@@ -38,6 +38,15 @@ impl Requester for NetRequester {
             .client
             .get(self.endpoint.join("/match").unwrap())
             .send()?;
+        let status = res.status();
+        if status.is_client_error() || status.is_server_error() {
+            return Err(match res.text()?.as_str().trim() {
+                "InvalidToken" => Error::InvalidToken,
+                "AccessTimeError" => Error::AccessTimeError,
+                _ => Error::Unknown(status),
+            }
+            .into());
+        }
         let json: super::Match = res.json()?;
         Ok(json)
     }
@@ -47,6 +56,15 @@ impl Requester for NetRequester {
             .client
             .get(self.endpoint.join("/problem").unwrap())
             .send()?;
+        let status = res.status();
+        if status.is_client_error() || status.is_server_error() {
+            return Err(match res.text()?.as_str().trim() {
+                "InvalidToken" => Error::InvalidToken,
+                "AccessTimeError" => Error::AccessTimeError,
+                _ => Error::Unknown(status),
+            }
+            .into());
+        }
         let json: super::Problem = res.json()?;
         Ok(json)
     }
@@ -58,11 +76,31 @@ impl Requester for NetRequester {
             .post(chunks_url.clone())
             .query(&[("n", using_chunks)])
             .send()?;
+        let status = res.status();
+        if status.is_client_error() || status.is_server_error() {
+            return Err(match res.text()?.as_str().trim() {
+                "InvalidToken" => Error::InvalidToken,
+                "AccessTimeError" => Error::AccessTimeError,
+                "FormatError" => Error::FormatError,
+                _ => Error::Unknown(status),
+            }
+            .into());
+        }
         let json: super::Chunks = res.json()?;
         json.chunks
             .into_iter()
             .map(|chunk| {
                 let res = self.client.get(chunks_url.join(&chunk).unwrap()).send()?;
+                let status = res.status();
+                if status.is_client_error() || status.is_server_error() {
+                    return Err(match res.text()?.as_str().trim() {
+                        "InvalidToken" => Error::InvalidToken,
+                        "AccessTimeError" => Error::AccessTimeError,
+                        "NotFound" => Error::NotFound(chunk),
+                        _ => Error::Unknown(status),
+                    }
+                    .into());
+                }
                 let bytes = res.bytes()?;
                 let mut cursor = Cursor::new(bytes);
                 let pcm = wav::read(&mut cursor)?
@@ -80,6 +118,17 @@ impl Requester for NetRequester {
             .post(self.endpoint.join("/problem").unwrap())
             .json(answer)
             .send()?;
+        let status = res.status();
+        if status.is_client_error() || status.is_server_error() {
+            return Err(match res.text()?.as_str().trim() {
+                "InvalidToken" => Error::InvalidToken,
+                "AccessTimeError" => Error::AccessTimeError,
+                "FormatError" => Error::FormatError,
+                "TooLargeRequestError" => Error::TooLargeRequestError,
+                _ => Error::Unknown(status),
+            }
+            .into());
+        }
         let json: super::AnswerResponse = res.json()?;
         Ok(json)
     }
