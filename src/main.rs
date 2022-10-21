@@ -32,7 +32,7 @@ fn main() -> anyhow::Result<()> {
 fn load_all_jk() -> io::Result<HashMap<CardVoiceIndex, AudioVec>> {
     let mut map = HashMap::new();
     for idx in CardVoiceIndex::all() {
-        let path: PathBuf = ["assets".into(), "jk".into(), idx.to_string()]
+        let path: PathBuf = ["assets".into(), "jk".into(), format!("{}.wav", idx)]
             .into_iter()
             .collect();
         let data = wav::read(&mut File::open(path)?)?.1;
