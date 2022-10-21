@@ -17,6 +17,7 @@ pub struct InspectPoint {
 pub struct Loss {
     /// 88 個の読み札の読み上げ音声
     card_voices: HashMap<CardVoiceIndex, AudioVec>,
+    flipped_card_voices: HashMap<CardVoiceIndex, AudioVec>,
     partial_card_voice_norm: HashMap<InspectPoint, ModInt998244353>,
     /// 数論変換のための前計算オブジェクト
     ntt: Ntt,
@@ -38,8 +39,17 @@ impl Loss {
                 );
             }
         }
+        let flipped_card_voices = card_voices
+            .iter()
+            .map(|(&idx, vec)| {
+                let mut cloned = vec.clone();
+                cloned.flip();
+                (idx, cloned)
+            })
+            .collect();
         Self {
             card_voices,
+            flipped_card_voices,
             partial_card_voice_norm,
             ntt: Ntt::new(),
         }
@@ -52,7 +62,8 @@ impl Loss {
     pub fn evaluate(&self, problem_voice: &AudioVec, point: InspectPoint) -> u32 {
         (problem_voice.squared_norm()
             - ModInt998244353::new(2)
-                * problem_voice.convolution(&self.card_voices[&point.using_voice], &self.ntt)
+                * problem_voice
+                    .convolution(&self.flipped_card_voices[&point.using_voice], &self.ntt)
                     [point.delay as usize]
             + self.partial_card_voice_norm[&InspectPoint {
                 delay: problem_voice.len() as isize - point.delay - 1,
@@ -112,6 +123,7 @@ impl Loss {
         for &InspectPoint { using_voice, delay } in first_answer {
             composed.add_assign(&self.card_voices[&using_voice].delayed(delay));
         }
+        composed.clip();
         const THRESHOLD: u32 = 100;
         problem_voice.sub(&composed).squared_norm().as_u32() < THRESHOLD
     }
