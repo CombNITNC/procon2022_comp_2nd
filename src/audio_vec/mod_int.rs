@@ -1,30 +1,41 @@
 use num::{One, Zero};
+use wrapping_proc_macro::wrapping;
 
-#[inline]
-fn reduce<const MOD: u32, const MOD_INV: u32>(n: u64) -> u32 {
-    debug_assert_eq!(MOD.wrapping_mul(MOD_INV), 1);
-    ((n + (n * -(MOD_INV as i64) as u64 * MOD as u64)) >> 32) as u32
+const fn find_neg_inv(n: u32, mut r: u32) -> u32 {
+    let mut res = 0;
+    let mut t = 0;
+    let mut i = 1;
+    while 1 < r {
+        if t % 2 == 0 {
+            t += n;
+            res += i;
+        }
+        t /= 2;
+        r /= 2;
+        i *= 2;
+    }
+    res
 }
 
-pub type ModInt998244353 = ModInt<998244353, 3296722945>;
+pub type ModInt998244353 = ModInt<998244353>;
+pub type ModInt924844033 = ModInt<924844033>;
 
-/// MOD を法とした整数. MOD.wrapping_mul(MOD_INV) が 1 でなければならない.
+/// MOD を法とした整数. MOD は素数であることが期待される.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(transparent)]
-pub struct ModInt<const MOD: u32, const MOD_INV: u32>(u32);
+pub struct ModInt<const MOD: u32>(u32);
 
-impl<const MOD: u32, const MOD_INV: u32> From<ModInt<MOD, MOD_INV>> for u32 {
+impl<const MOD: u32> From<ModInt<MOD>> for u32 {
     #[inline]
-    fn from(mod_int: ModInt<MOD, MOD_INV>) -> Self {
+    fn from(mod_int: ModInt<MOD>) -> Self {
         mod_int.as_u32()
     }
 }
 
-impl<const MOD: u32, const MOD_INV: u32> ModInt<MOD, MOD_INV> {
+impl<const MOD: u32> ModInt<MOD> {
     #[inline]
-    pub fn new(n: u32) -> Self {
-        debug_assert_eq!(MOD.wrapping_mul(MOD_INV), 1);
-        Self(n)
+    pub const fn new(n: u32) -> Self {
+        Self::reduce(n as u64 % MOD as u64)
     }
 
     #[inline]
@@ -32,15 +43,12 @@ impl<const MOD: u32, const MOD_INV: u32> ModInt<MOD, MOD_INV> {
         self.0
     }
 
-    #[inline]
-    pub const fn modulo() -> u32 {
-        MOD
-    }
-
-    #[inline]
-    pub const fn modulo_inv() -> u32 {
-        MOD_INV
-    }
+    /// この剰余である整数の法. 素数であるとする.
+    pub const N: u32 = MOD;
+    /// N のモジュラー逆数. N * N_PRIME ≡ -1 となる数.
+    pub const N_PRIME: u32 = find_neg_inv(MOD, Self::R);
+    /// モンゴメリ表現に用いる法.
+    pub const R: u32 = MOD.next_power_of_two();
 
     #[inline]
     pub fn pow(mut self, mut exp: u32) -> Self {
@@ -71,20 +79,31 @@ impl<const MOD: u32, const MOD_INV: u32> ModInt<MOD, MOD_INV> {
         }
         result
     }
+
+    #[inline]
+    pub const fn reduce(t: u64) -> Self {
+        let n = Self::N as u64;
+        let r = Self::R as u64;
+        let n_prime = Self::N_PRIME as u64;
+        let t_prime = wrapping! {
+            (t + (t * n_prime % r) * n) / r
+        };
+        Self(if n <= t_prime { t_prime - n } else { t_prime } as u32)
+    }
 }
 
 macro_rules! impl_from_for_mod_int {
     ($t:ty) => {
-        impl<const MOD: u32, const MOD_INV: u32> From<$t> for ModInt<MOD, MOD_INV> {
+        impl<const MOD: u32> From<$t> for ModInt<MOD> {
             #[inline]
             fn from(x: $t) -> Self {
-                Self(x as u32 % MOD)
+                Self::new(x as u32)
             }
         }
-        impl<const MOD: u32, const MOD_INV: u32> From<&'_ $t> for ModInt<MOD, MOD_INV> {
+        impl<const MOD: u32> From<&'_ $t> for ModInt<MOD> {
             #[inline]
             fn from(&x: &'_ $t) -> Self {
-                Self(x as u32 % MOD)
+                Self::new(x as u32)
             }
         }
     };
@@ -94,7 +113,7 @@ impl_from_for_mod_int!(u64);
 impl_from_for_mod_int!(u32);
 impl_from_for_mod_int!(i32);
 
-impl<const MOD: u32, const MOD_INV: u32> std::ops::Add for ModInt<MOD, MOD_INV> {
+impl<const MOD: u32> std::ops::Add for ModInt<MOD> {
     type Output = Self;
 
     #[inline]
@@ -104,17 +123,21 @@ impl<const MOD: u32, const MOD_INV: u32> std::ops::Add for ModInt<MOD, MOD_INV> 
     }
 }
 
-impl<const MOD: u32, const MOD_INV: u32> std::ops::AddAssign for ModInt<MOD, MOD_INV> {
+impl<const MOD: u32> std::ops::AddAssign for ModInt<MOD> {
     #[inline]
     fn add_assign(&mut self, rhs: Self) {
-        self.0 += rhs.0 - 2 * MOD;
+        wrapping! {
+            self.0 += rhs.0 - 2u32 * MOD;
+        }
         if (self.0 as i32) < 0 {
-            self.0 += 2 * MOD;
+            wrapping! {
+                self.0 += 2u32 * MOD;
+            }
         }
     }
 }
 
-impl<const MOD: u32, const MOD_INV: u32> std::ops::Sub for ModInt<MOD, MOD_INV> {
+impl<const MOD: u32> std::ops::Sub for ModInt<MOD> {
     type Output = Self;
 
     #[inline]
@@ -124,17 +147,21 @@ impl<const MOD: u32, const MOD_INV: u32> std::ops::Sub for ModInt<MOD, MOD_INV> 
     }
 }
 
-impl<const MOD: u32, const MOD_INV: u32> std::ops::SubAssign for ModInt<MOD, MOD_INV> {
+impl<const MOD: u32> std::ops::SubAssign for ModInt<MOD> {
     #[inline]
     fn sub_assign(&mut self, rhs: Self) {
-        self.0 -= rhs.0;
+        wrapping! {
+            self.0 -= rhs.0;
+        }
         if (self.0 as i32) < 0 {
-            self.0 += 2 * MOD;
+            wrapping! {
+                self.0 += 2u32 * MOD;
+            }
         }
     }
 }
 
-impl<const MOD: u32, const MOD_INV: u32> std::ops::Mul for ModInt<MOD, MOD_INV> {
+impl<const MOD: u32> std::ops::Mul for ModInt<MOD> {
     type Output = Self;
 
     #[inline]
@@ -144,14 +171,14 @@ impl<const MOD: u32, const MOD_INV: u32> std::ops::Mul for ModInt<MOD, MOD_INV> 
     }
 }
 
-impl<const MOD: u32, const MOD_INV: u32> std::ops::MulAssign for ModInt<MOD, MOD_INV> {
+impl<const MOD: u32> std::ops::MulAssign for ModInt<MOD> {
     #[inline]
     fn mul_assign(&mut self, rhs: Self) {
-        self.0 = reduce::<MOD, MOD_INV>(self.0 as u64 * rhs.0 as u64);
+        *self = Self::reduce(self.0 as u64 * rhs.0 as u64);
     }
 }
 
-impl<const MOD: u32, const MOD_INV: u32> std::ops::Div for ModInt<MOD, MOD_INV> {
+impl<const MOD: u32> std::ops::Div for ModInt<MOD> {
     type Output = Self;
 
     #[inline]
@@ -161,7 +188,7 @@ impl<const MOD: u32, const MOD_INV: u32> std::ops::Div for ModInt<MOD, MOD_INV> 
     }
 }
 
-impl<const MOD: u32, const MOD_INV: u32> std::ops::DivAssign for ModInt<MOD, MOD_INV> {
+impl<const MOD: u32> std::ops::DivAssign for ModInt<MOD> {
     #[inline]
     #[allow(clippy::suspicious_op_assign_impl)]
     fn div_assign(&mut self, rhs: Self) {
@@ -169,7 +196,7 @@ impl<const MOD: u32, const MOD_INV: u32> std::ops::DivAssign for ModInt<MOD, MOD
     }
 }
 
-impl<const MOD: u32, const MOD_INV: u32> std::ops::Neg for ModInt<MOD, MOD_INV> {
+impl<const MOD: u32> std::ops::Neg for ModInt<MOD> {
     type Output = Self;
 
     #[inline]
@@ -178,7 +205,7 @@ impl<const MOD: u32, const MOD_INV: u32> std::ops::Neg for ModInt<MOD, MOD_INV> 
     }
 }
 
-impl<const MOD: u32, const MOD_INV: u32> std::iter::Sum for ModInt<MOD, MOD_INV> {
+impl<const MOD: u32> std::iter::Sum for ModInt<MOD> {
     #[inline]
     fn sum<I>(iter: I) -> Self
     where
@@ -188,7 +215,7 @@ impl<const MOD: u32, const MOD_INV: u32> std::iter::Sum for ModInt<MOD, MOD_INV>
     }
 }
 
-impl<const MOD: u32, const MOD_INV: u32> std::iter::Product for ModInt<MOD, MOD_INV> {
+impl<const MOD: u32> std::iter::Product for ModInt<MOD> {
     #[inline]
     fn product<I>(iter: I) -> Self
     where
@@ -198,7 +225,7 @@ impl<const MOD: u32, const MOD_INV: u32> std::iter::Product for ModInt<MOD, MOD_
     }
 }
 
-impl<const MOD: u32, const MOD_INV: u32> Zero for ModInt<MOD, MOD_INV> {
+impl<const MOD: u32> Zero for ModInt<MOD> {
     #[inline]
     fn zero() -> Self {
         Self(0)
@@ -210,7 +237,7 @@ impl<const MOD: u32, const MOD_INV: u32> Zero for ModInt<MOD, MOD_INV> {
     }
 }
 
-impl<const MOD: u32, const MOD_INV: u32> One for ModInt<MOD, MOD_INV> {
+impl<const MOD: u32> One for ModInt<MOD> {
     #[inline]
     fn one() -> Self {
         Self(1)

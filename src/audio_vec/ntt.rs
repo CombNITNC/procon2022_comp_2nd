@@ -16,7 +16,7 @@ pub struct Ntt {
 
 impl Ntt {
     pub fn new() -> Self {
-        let modulo = ModInt998244353::modulo();
+        let modulo = ModInt998244353::N;
         let primitive_root = primitive_root(modulo);
 
         let mut w = [ModInt998244353::default(); LEVEL];
@@ -73,7 +73,7 @@ impl Ntt {
                 }
             } else {
                 let m0 = u32x8::default();
-                let m2 = u32x8::splat(2 * ModInt998244353::modulo());
+                let m2 = u32x8::splat(2 * ModInt998244353::N);
                 for j0 in (0..v).step_by(8) {
                     let j1 = j0 + v;
                     let t0 = vec.get_u32x8(j0);
@@ -115,9 +115,9 @@ impl Ntt {
                 let mut xx = one;
                 for jh in (0..u).step_by(4) {
                     let m0 = u32x4::default();
-                    let m1 = u32x4::splat(ModInt998244353::modulo());
-                    let m2 = u32x4::splat(2 * ModInt998244353::modulo());
-                    let inv_mod = u32x4::splat(ModInt998244353::modulo_inv());
+                    let m1 = u32x4::splat(ModInt998244353::N);
+                    let m2 = u32x4::splat(2 * ModInt998244353::N);
+                    let inv_mod = u32x4::splat(ModInt998244353::N_PRIME);
                     let im = u32x4::splat(im.as_u32());
 
                     if jh == 0 {
@@ -181,9 +181,9 @@ impl Ntt {
                 }
             } else {
                 let m0 = u32x8::default();
-                let m1 = u32x8::splat(ModInt998244353::modulo());
-                let m2 = u32x8::splat(2 * ModInt998244353::modulo());
-                let inv_mod = u32x8::splat(ModInt998244353::modulo_inv());
+                let m1 = u32x8::splat(ModInt998244353::N);
+                let m2 = u32x8::splat(2 * ModInt998244353::N);
+                let inv_mod = u32x8::splat(ModInt998244353::N_PRIME);
                 let im = u32x8::splat(im.as_u32());
 
                 let mut xx = one;
@@ -298,9 +298,9 @@ impl Ntt {
                 }
             } else if v == 4 {
                 let m0 = u32x4::default();
-                let m1 = u32x4::splat(ModInt998244353::modulo());
-                let m2 = u32x4::splat(2 * ModInt998244353::modulo());
-                let inv_mod = u32x4::splat(ModInt998244353::modulo_inv());
+                let m1 = u32x4::splat(ModInt998244353::N);
+                let m2 = u32x4::splat(2 * ModInt998244353::N);
+                let inv_mod = u32x4::splat(ModInt998244353::N_PRIME);
 
                 let mut xx = one;
                 u <<= 2;
@@ -387,9 +387,9 @@ impl Ntt {
                 }
             } else {
                 let m0 = u32x8::default();
-                let m1 = u32x8::splat(ModInt998244353::modulo());
-                let m2 = u32x8::splat(ModInt998244353::modulo());
-                let mod_inv = u32x8::splat(ModInt998244353::modulo_inv());
+                let m1 = u32x8::splat(ModInt998244353::N);
+                let m2 = u32x8::splat(ModInt998244353::N);
+                let mod_inv = u32x8::splat(ModInt998244353::N_PRIME);
 
                 let mut xx = one;
                 u <<= 2;
@@ -490,7 +490,7 @@ impl Ntt {
                 }
             } else {
                 let m0 = u32x8::default();
-                let m2 = u32x8::splat(2 * ModInt998244353::modulo());
+                let m2 = u32x8::splat(2 * ModInt998244353::N);
 
                 for j0 in (0..v).step_by(8) {
                     let j1 = j0 + v;
