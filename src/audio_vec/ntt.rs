@@ -3,6 +3,8 @@ use wide::{u32x4, u32x8};
 use super::{mod_int::ModInt998244353, AudioVec};
 
 mod montgomery;
+#[cfg(test)]
+mod tests;
 
 /// 変換可能な成分の最高次数.
 const LEVEL: usize = 998244352usize.trailing_zeros() as usize;
