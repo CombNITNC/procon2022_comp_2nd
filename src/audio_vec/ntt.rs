@@ -523,35 +523,35 @@ fn primitive_root(modulo: u32) -> ModInt998244353 {
             break;
         }
         if m % i == 0 {
-            divisors.push(i);
+            divisors.push(i as u64);
             while m % i == 0 {
                 m /= i;
             }
         }
     }
     if m != 1 {
-        divisors.push(m);
+        divisors.push(m as u64);
     }
 
     'find: for primitive_root in 2.. {
         for divisor in &divisors {
-            let mut a = primitive_root;
-            let mut b = (modulo - 1) / divisor;
-            let mut r = 1;
+            let mut a: u64 = primitive_root;
+            let mut b: u64 = (modulo as u64 - 1) / divisor;
+            let mut r: u64 = 1;
             while b != 0 {
                 if b % 2 != 0 {
                     r *= a;
-                    r %= modulo;
+                    r %= modulo as u64;
                 }
                 a *= a;
-                a %= modulo;
+                a %= modulo as u64;
                 b /= 2;
             }
             if r == 1 {
                 continue 'find;
             }
         }
-        return ModInt998244353::new(primitive_root);
+        return ModInt998244353::new(primitive_root as u32);
     }
     unreachable!()
 }
