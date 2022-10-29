@@ -513,6 +513,12 @@ impl Ntt {
     }
 }
 
+impl Default for Ntt {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 fn primitive_root(modulo: u32) -> ModInt998244353 {
     if modulo == 2 {
         return ModInt998244353::new(1);
