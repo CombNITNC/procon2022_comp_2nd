@@ -122,13 +122,18 @@ impl AudioVec {
     }
 
     #[inline]
+    pub fn squared(&self) -> impl Iterator<Item = ModInt998244353> + '_ {
+        self.iter().map(|&a| a * a)
+    }
+
+    #[inline]
     pub fn inner_cross(&self, other: &Self) -> ModInt998244353 {
         self.iter().zip(other.iter()).map(|(&a, &b)| a * b).sum()
     }
 
     #[inline]
     pub fn squared_norm(&self) -> ModInt998244353 {
-        self.inner_cross(self)
+        self.squared().sum()
     }
 
     #[inline]
