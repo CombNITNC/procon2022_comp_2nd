@@ -1,26 +1,27 @@
 use num::{One, Zero};
 use wrapping_proc_macro::wrapping;
 
-const fn find_neg_inv(n: u32, mut r: u32) -> u32 {
-    let mut res = 0;
-    let mut t = 0;
-    let mut i = 1;
-    while 1 < r {
-        if t % 2 == 0 {
-            t += n;
-            res += i;
-        }
-        t /= 2;
-        r /= 2;
-        i *= 2;
+const fn find_neg_inv(n: u32) -> u32 {
+    let n = n as i64;
+    ((-n) % n) as u32
+}
+
+const fn find_r(n: u32) -> u32 {
+    let n = n as i64;
+    let mut ret = n;
+    wrapping! {
+        ret *= 2i64 - n * ret;
+        ret *= 2i64 - n * ret;
+        ret *= 2i64 - n * ret;
+        ret *= 2i64 - n * ret;
     }
-    res
+    ret as u32
 }
 
 pub type ModInt998244353 = ModInt<998244353>;
 pub type ModInt924844033 = ModInt<924844033>;
 
-/// MOD を法とした整数. MOD は素数であることが期待される.
+/// MOD を法としたモンゴメリ表現. MOD は素数であることが期待される.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(transparent)]
 pub struct ModInt<const MOD: u32>(u32);
@@ -34,7 +35,10 @@ impl<const MOD: u32> From<ModInt<MOD>> for u32 {
 
 impl<const MOD: u32> ModInt<MOD> {
     #[inline]
-    pub const fn new(n: u32) -> Self {
+    pub fn new(n: u32) -> Self {
+        debug_assert_eq!(Self::R.wrapping_mul(Self::N), 1);
+        debug_assert!(Self::N < (1 << 30));
+        debug_assert_eq!(Self::N % 2, 1);
         Self::reduce(n as u64 % MOD as u64)
     }
 
@@ -46,9 +50,9 @@ impl<const MOD: u32> ModInt<MOD> {
     /// この剰余である整数の法. 素数であるとする.
     pub const N: u32 = MOD;
     /// N のモジュラー逆数. N * N_PRIME ≡ -1 となる数.
-    pub const N_PRIME: u32 = find_neg_inv(MOD, Self::R);
-    /// モンゴメリ表現に用いる法.
-    pub const R: u32 = MOD.next_power_of_two();
+    pub const N_PRIME: u32 = find_neg_inv(MOD);
+    /// N の逆数. N * R ≡ 1 となる数.
+    pub const R: u32 = find_r(MOD);
 
     #[inline]
     pub fn pow(mut self, mut exp: u32) -> Self {

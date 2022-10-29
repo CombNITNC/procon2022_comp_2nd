@@ -7,7 +7,7 @@ mod montgomery;
 mod tests;
 
 /// 変換可能な成分の最高次数.
-const LEVEL: usize = 998244352usize.trailing_zeros() as usize;
+const LEVEL: usize = (ModInt998244353::N - 1).trailing_zeros() as usize;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Ntt {
@@ -42,7 +42,7 @@ impl Ntt {
         d_inv_w[2] = w[2];
 
         for i in 3..LEVEL {
-            d_w[i] = d_w[i - 1] * d_inv_w[i - 2] * w[i];
+            d_w[i] = d_w[i - 1] * inv_w[i - 2] * w[i];
             d_inv_w[i] = d_inv_w[i - 1] * w[i - 2] * inv_w[i];
         }
 
@@ -111,17 +111,17 @@ impl Ntt {
                     vec[jh + 1] = t0p2 - t1p3;
                     vec[jh + 2] = t0m2 + t1m3;
                     vec[jh + 3] = t0m2 - t1m3;
-                    xx *= self.d_w[jh.trailing_zeros() as usize];
+                    xx *= self.d_w[(jh + 4).trailing_zeros() as usize];
                 }
             } else if v == 4 {
                 let mut xx = one;
-                for jh in (0..u).step_by(4) {
-                    let m0 = u32x4::default();
-                    let m1 = u32x4::splat(ModInt998244353::N);
-                    let m2 = u32x4::splat(2 * ModInt998244353::N);
-                    let inv_mod = u32x4::splat(ModInt998244353::N_PRIME);
-                    let im = u32x4::splat(im.as_u32());
 
+                let m0 = u32x4::default();
+                let m1 = u32x4::splat(ModInt998244353::N);
+                let m2 = u32x4::splat(2 * ModInt998244353::N);
+                let inv_mod = u32x4::splat(ModInt998244353::R);
+                let im = u32x4::splat(im.as_u32());
+                for jh in (0..u).step_by(4) {
                     if jh == 0 {
                         for j0 in (0..v).step_by(4) {
                             let j1 = j0 + v;
@@ -185,7 +185,7 @@ impl Ntt {
                 let m0 = u32x8::default();
                 let m1 = u32x8::splat(ModInt998244353::N);
                 let m2 = u32x8::splat(2 * ModInt998244353::N);
-                let inv_mod = u32x8::splat(ModInt998244353::N_PRIME);
+                let inv_mod = u32x8::splat(ModInt998244353::R);
                 let im = u32x8::splat(im.as_u32());
 
                 let mut xx = one;
@@ -302,7 +302,7 @@ impl Ntt {
                 let m0 = u32x4::default();
                 let m1 = u32x4::splat(ModInt998244353::N);
                 let m2 = u32x4::splat(2 * ModInt998244353::N);
-                let inv_mod = u32x4::splat(ModInt998244353::N_PRIME);
+                let inv_mod = u32x4::splat(ModInt998244353::R);
 
                 let mut xx = one;
                 u <<= 2;
