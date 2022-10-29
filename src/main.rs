@@ -1,18 +1,9 @@
-use std::{collections::HashMap, fs::File, io, path::PathBuf};
-
 use log::info;
-
-use crate::request::mock::MockRequester;
-
-use self::{
-    audio_vec::AudioVec,
-    request::{net::NetRequester, Answer, Requester},
-    solve::{card_voice::CardVoiceIndex, Loss},
+use procon2022_comp_2nd::{
+    load_all_jk,
+    request::{mock::MockRequester, net::NetRequester, Answer, Requester},
+    solve::Loss,
 };
-
-mod audio_vec;
-mod request;
-mod solve;
 
 fn main() -> anyhow::Result<()> {
     dotenv::dotenv()?;
@@ -36,22 +27,6 @@ fn main() -> anyhow::Result<()> {
         let requester = NetRequester::new(&endpoint, &token);
         run_solver(&loss, &requester)
     }
-}
-
-fn load_all_jk() -> io::Result<HashMap<CardVoiceIndex, AudioVec>> {
-    let mut map = HashMap::new();
-    for idx in CardVoiceIndex::all() {
-        let path: PathBuf = ["assets".into(), "jk".into(), format!("{}.wav", idx)]
-            .into_iter()
-            .collect();
-        let data = wav::read(&mut File::open(&path)?)?.1;
-        let pcm = data
-            .try_into_sixteen()
-            .expect("input audio bit-depth must be 16-bit");
-        map.insert(idx, AudioVec::from_pcm(&pcm));
-        info!("loaded speech voice: {}", path.display());
-    }
-    Ok(map)
 }
 
 fn run_solver(loss: &Loss, requester: &impl Requester) -> anyhow::Result<()> {

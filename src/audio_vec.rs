@@ -1,5 +1,6 @@
 use std::ops::{Index, IndexMut};
 
+use serde::{Deserialize, Serialize};
 use wide::{u32x4, u32x8};
 
 use self::mod_int::ModInt998244353;
@@ -8,7 +9,7 @@ pub mod mod_int;
 pub mod ntt;
 
 /// 音声データのベクトル.
-#[derive(Debug, Default, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct AudioVec {
     vec: Vec<ModInt998244353>,
 }

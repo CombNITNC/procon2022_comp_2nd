@@ -40,6 +40,7 @@ impl Loss {
                     delayed.squared_norm(),
                 );
             }
+            info!("pre-calculated: {:?}", using);
         }
         let flipped_card_voices = card_voices
             .iter()

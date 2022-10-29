@@ -1,4 +1,5 @@
 use num::{One, Zero};
+use serde::{Deserialize, Serialize};
 use wrapping_proc_macro::wrapping;
 
 const fn find_neg_inv(n: u32) -> u32 {
@@ -22,7 +23,9 @@ pub type ModInt998244353 = ModInt<998244353>;
 pub type ModInt924844033 = ModInt<924844033>;
 
 /// MOD を法としたモンゴメリ表現. MOD は素数であることが期待される.
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(
+    Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize,
+)]
 #[repr(transparent)]
 pub struct ModInt<const MOD: u32>(u32);
 
