@@ -1,5 +1,7 @@
 use std::{collections::HashMap, fs::File, io, path::PathBuf};
 
+use log::info;
+
 use self::{
     audio_vec::AudioVec,
     request::{net::NetRequester, Answer, Requester},
@@ -12,6 +14,7 @@ mod solve;
 
 fn main() -> anyhow::Result<()> {
     dotenv::dotenv()?;
+    env_logger::init();
 
     let endpoint = std::env::var("ENDPOINT")?;
     let token = std::env::var("TOKEN")?;
@@ -20,6 +23,8 @@ fn main() -> anyhow::Result<()> {
     let all_jk = load_all_jk()?;
     const MIN_VOICE_LEN: usize = 48000 / 2;
     let loss = Loss::new(all_jk, MIN_VOICE_LEN);
+
+    info!("setup complete");
 
     if debug.as_str().trim() == "True" {
         todo!()
@@ -35,21 +40,27 @@ fn load_all_jk() -> io::Result<HashMap<CardVoiceIndex, AudioVec>> {
         let path: PathBuf = ["assets".into(), "jk".into(), format!("{}.wav", idx)]
             .into_iter()
             .collect();
-        let data = wav::read(&mut File::open(path)?)?.1;
+        let data = wav::read(&mut File::open(&path)?)?.1;
         let pcm = data
             .try_into_sixteen()
             .expect("input audio bit-depth must be 16-bit");
         map.insert(idx, AudioVec::from_pcm(&pcm));
+        info!("loaded speech voice: {}", path.display());
     }
     Ok(map)
 }
 
 fn run_solver(loss: &Loss, requester: &impl Requester) -> anyhow::Result<()> {
     let problem_info = requester.get_problem()?;
+
+    info!("got problem: {:?}", problem_info);
+
     let chunks = requester.get_chunks(1)?;
     let chunk = &chunks[0];
 
     let points = loss.find_points(problem_info.data as usize, chunk);
+
+    info!("found points: {:?}", points);
 
     requester.post_answer(&Answer {
         problem_id: problem_info.id,

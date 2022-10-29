@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use log::info;
+
 use crate::audio_vec::{mod_int::ModInt998244353, ntt::Ntt, AudioVec};
 
 use self::card_voice::CardVoiceIndex;
@@ -60,6 +62,7 @@ impl Loss {
     /// `problem_voice` は `card_voices` のうちからいくつかが選ばれて, 時間をずらして重ね合わせたもの
     #[inline]
     pub fn evaluate(&self, problem_voice: &AudioVec, point: InspectPoint) -> u32 {
+        info!("start to evaluate: {:?}", point);
         (problem_voice.squared_norm()
             - ModInt998244353::new(2)
                 * problem_voice
@@ -90,10 +93,12 @@ impl Loss {
                     })
                 })
                 .collect();
-            points.sort_by_key(|&p| self.evaluate(problem_voice, p));
+            points.sort_unstable_by_key(|&p| self.evaluate(problem_voice, p));
             points
         };
         let first_answer = points_by_loss[..solutions].to_vec();
+
+        info!("first answer is: {:?}", first_answer);
 
         // この最初に見つけた解が問題に一致するかどうか検算
         if self.validate(problem_voice, &first_answer) {
