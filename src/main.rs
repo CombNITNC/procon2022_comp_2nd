@@ -2,6 +2,8 @@ use std::{collections::HashMap, fs::File, io, path::PathBuf};
 
 use log::info;
 
+use crate::request::mock::MockRequester;
+
 use self::{
     audio_vec::AudioVec,
     request::{net::NetRequester, Answer, Requester},
@@ -27,7 +29,9 @@ fn main() -> anyhow::Result<()> {
     info!("setup complete");
 
     if debug.as_str().trim() == "True" {
-        todo!()
+        let requester =
+            MockRequester::new(["assets", "sample", "sample_Q_E01"].into_iter().collect());
+        run_solver(&loss, &requester)
     } else {
         let requester = NetRequester::new(&endpoint, &token);
         run_solver(&loss, &requester)

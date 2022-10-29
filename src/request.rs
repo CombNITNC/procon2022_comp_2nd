@@ -5,6 +5,7 @@ use thiserror::Error;
 
 use crate::audio_vec::AudioVec;
 
+pub mod mock;
 pub mod net;
 
 #[derive(Debug, Deserialize)]
