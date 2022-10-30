@@ -147,9 +147,7 @@ impl AudioVec {
     #[inline]
     pub fn clip(&mut self) {
         for elem in self.iter_mut() {
-            *elem = ModInt998244353::new(
-                (elem.as_u32() as i32).clamp(i16::MIN as i32, i16::MAX as i32) as u32,
-            )
+            *elem = (*elem).min(ModInt998244353::new(u16::MAX as u32));
         }
     }
 
