@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use log::info;
+use num::Zero;
 
 use crate::{
     audio_vec::{mod_int::ModInt998244353, ntt::Ntt, AudioVec},
@@ -26,6 +27,7 @@ pub struct Loss {
     precalc: Precalculation,
     /// 数論変換のための前計算オブジェクト
     ntt: Ntt,
+    convolution_cache: HashMap<CardVoiceIndex, Vec<ModInt998244353>>,
 }
 
 impl Loss {
@@ -44,6 +46,7 @@ impl Loss {
             flipped_card_voices,
             precalc,
             ntt: Ntt::new(),
+            convolution_cache: HashMap::new(),
         }
     }
 
@@ -51,13 +54,23 @@ impl Loss {
     ///
     /// `problem_voice` は `card_voices` のうちからいくつかが選ばれて, 時間をずらして重ね合わせたもの
     #[inline]
-    pub fn evaluate(&self, problem_voice: &AudioVec, point: InspectPoint) -> u32 {
+    pub fn evaluate(&mut self, problem_voice: &AudioVec, point: InspectPoint) -> u32 {
         info!("start to evaluate: {:?}", point);
-        (problem_voice.squared_norm()
-            - ModInt998244353::new(2)
-                * problem_voice
-                    .convolution(&self.flipped_card_voices[&point.using_voice], &self.ntt)
-                    [point.delay as usize]
+        let convolution = self
+            .convolution_cache
+            .entry(point.using_voice)
+            .or_insert_with(|| {
+                problem_voice.convolution(&self.flipped_card_voices[&point.using_voice], &self.ntt)
+            });
+        let convolution_at = if point.delay < 0 {
+            ModInt998244353::zero()
+        } else {
+            convolution
+                .get(point.delay as usize)
+                .copied()
+                .unwrap_or_else(ModInt998244353::zero)
+        };
+        (problem_voice.squared_norm() - ModInt998244353::new(2) * convolution_at
             + self.precalc.get(
                 point.using_voice,
                 problem_voice.len() as isize - point.delay - 1,
@@ -66,7 +79,7 @@ impl Loss {
         .as_u32()
     }
 
-    pub fn find_points(&self, solutions: usize, problem_voice: &AudioVec) -> Vec<InspectPoint> {
+    pub fn find_points(&mut self, solutions: usize, problem_voice: &AudioVec) -> Vec<InspectPoint> {
         let points_by_loss: Vec<_> = {
             let mut points: Vec<_> = self
                 .card_voices

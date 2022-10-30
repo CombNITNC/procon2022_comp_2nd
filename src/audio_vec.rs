@@ -166,9 +166,9 @@ impl AudioVec {
     }
 
     #[inline]
-    pub fn convolution(&self, other: &Self, ntt: &ntt::Ntt) -> Self {
+    pub fn convolution(&self, other: &Self, ntt: &ntt::Ntt) -> Vec<ModInt998244353> {
         if self.is_empty() && other.is_empty() {
-            return Self::default();
+            return vec![];
         }
 
         let len = self.len() + other.len() - 1;
@@ -180,7 +180,7 @@ impl AudioVec {
                     res[i + j] += left * right;
                 }
             }
-            return Self { vec: res };
+            return res;
         }
 
         let buf_len = len.next_power_of_two();
@@ -202,7 +202,7 @@ impl AudioVec {
         for elem in buf1.iter_mut() {
             *elem *= inv;
         }
-        buf1
+        buf1.vec
     }
 }
 

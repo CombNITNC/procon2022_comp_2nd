@@ -21,7 +21,7 @@ fn convolution1() {
         .into_iter()
         .map(ModInt998244353::new)
         .collect();
-    assert_eq!(out.vec, expected);
+    assert_eq!(out, expected);
 }
 
 #[test]
@@ -35,5 +35,5 @@ fn convolution2() {
     let out = a_audio.convolution(&b_audio, &ntt);
 
     let expected: Vec<_> = [871938225].into_iter().map(ModInt998244353::new).collect();
-    assert_eq!(out.vec, expected);
+    assert_eq!(out, expected);
 }
