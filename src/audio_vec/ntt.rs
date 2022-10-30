@@ -1,3 +1,4 @@
+use num::traits::Pow;
 use wide::{u32x4, u32x8};
 
 use super::{mod_int::ModInt998244353, AudioVec};
@@ -119,7 +120,7 @@ impl Ntt {
                 let m0 = u32x4::default();
                 let m1 = u32x4::splat(ModInt998244353::N);
                 let m2 = u32x4::splat(2 * ModInt998244353::N);
-                let inv_mod = u32x4::splat(ModInt998244353::R);
+                let inv_mod = u32x4::splat(ModInt998244353::N_PRIME);
                 let im = u32x4::splat(im.as_u32());
                 for jh in (0..u).step_by(4) {
                     if jh == 0 {
@@ -185,7 +186,7 @@ impl Ntt {
                 let m0 = u32x8::default();
                 let m1 = u32x8::splat(ModInt998244353::N);
                 let m2 = u32x8::splat(2 * ModInt998244353::N);
-                let inv_mod = u32x8::splat(ModInt998244353::R);
+                let inv_mod = u32x8::splat(ModInt998244353::N_PRIME);
                 let im = u32x8::splat(im.as_u32());
 
                 let mut xx = one;
@@ -302,7 +303,7 @@ impl Ntt {
                 let m0 = u32x4::default();
                 let m1 = u32x4::splat(ModInt998244353::N);
                 let m2 = u32x4::splat(2 * ModInt998244353::N);
-                let inv_mod = u32x4::splat(ModInt998244353::R);
+                let inv_mod = u32x4::splat(ModInt998244353::N_PRIME);
 
                 let mut xx = one;
                 u <<= 2;
