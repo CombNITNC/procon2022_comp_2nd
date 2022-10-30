@@ -212,7 +212,9 @@ impl AudioVec {
         // プリエンファシス
         let emphasized = path.windows(2).map(|win| {
             ModInt998244353::new(
-                (win[1] as i32 - win[0] as i32 * 97 / 100) as u32 + (i16::MAX as u32),
+                (win[1] as i64 - win[0] as i64 * 97 / 100 + i16::MAX as i64)
+                    .try_into()
+                    .unwrap(),
             )
         });
 
