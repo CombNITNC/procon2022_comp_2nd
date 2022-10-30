@@ -251,7 +251,6 @@ impl Ntt {
                     }
                     xx *= self.d_w[(jh + 4).trailing_zeros() as usize];
                 }
-                todo!()
             }
 
             u <<= 2;
