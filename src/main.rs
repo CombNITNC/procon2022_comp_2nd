@@ -1,9 +1,17 @@
 use log::info;
-use procon2022_comp_2nd::{
-    load_all_jk,
-    request::{mock::MockRequester, net::NetRequester, Answer, Requester},
+
+use crate::{
+    precalc::load_all_jk,
+    request::{mock::MockRequester, net::NetRequester, Answer},
     solve::Loss,
 };
+
+use self::request::Requester;
+
+mod audio_vec;
+mod precalc;
+mod request;
+mod solve;
 
 fn main() -> anyhow::Result<()> {
     dotenv::dotenv()?;
@@ -14,8 +22,7 @@ fn main() -> anyhow::Result<()> {
     let debug = std::env::var("DEBUG")?;
 
     let all_jk = load_all_jk()?;
-    const MIN_VOICE_LEN: usize = 48000 / 2;
-    let loss = Loss::new(all_jk, MIN_VOICE_LEN);
+    let loss = Loss::new(all_jk);
 
     info!("setup complete");
 

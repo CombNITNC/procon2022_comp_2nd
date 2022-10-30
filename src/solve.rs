@@ -2,7 +2,10 @@ use std::collections::HashMap;
 
 use log::info;
 
-use crate::audio_vec::{mod_int::ModInt998244353, ntt::Ntt, AudioVec};
+use crate::{
+    audio_vec::{mod_int::ModInt998244353, ntt::Ntt, AudioVec},
+    precalc::Precalculation,
+};
 
 use self::card_voice::CardVoiceIndex;
 
@@ -15,33 +18,19 @@ pub struct InspectPoint {
 }
 
 /// 損失関数のオブジェクト
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug)]
 pub struct Loss {
     /// 88 個の読み札の読み上げ音声
     card_voices: HashMap<CardVoiceIndex, AudioVec>,
     flipped_card_voices: HashMap<CardVoiceIndex, AudioVec>,
-    partial_card_voice_norm: HashMap<InspectPoint, ModInt998244353>,
+    precalc: Precalculation,
     /// 数論変換のための前計算オブジェクト
     ntt: Ntt,
 }
 
 impl Loss {
-    pub fn new(card_voices: HashMap<CardVoiceIndex, AudioVec>, problem_voice_len: usize) -> Self {
-        let mut partial_card_voice_norm = HashMap::new();
-        for (&using, voice) in card_voices.iter() {
-            let voice_len = voice.len() as isize;
-            for delay in -voice_len..problem_voice_len as isize {
-                let delayed = voice.delayed(delay);
-                partial_card_voice_norm.insert(
-                    InspectPoint {
-                        using_voice: using,
-                        delay,
-                    },
-                    delayed.squared_norm(),
-                );
-            }
-            info!("pre-calculated: {:?}", using);
-        }
+    pub fn new(card_voices: HashMap<CardVoiceIndex, AudioVec>) -> Self {
+        let precalc = Precalculation::new(&card_voices);
         let flipped_card_voices = card_voices
             .iter()
             .map(|(&idx, vec)| {
@@ -53,7 +42,7 @@ impl Loss {
         Self {
             card_voices,
             flipped_card_voices,
-            partial_card_voice_norm,
+            precalc,
             ntt: Ntt::new(),
         }
     }
@@ -69,15 +58,12 @@ impl Loss {
                 * problem_voice
                     .convolution(&self.flipped_card_voices[&point.using_voice], &self.ntt)
                     [point.delay as usize]
-            + self.partial_card_voice_norm[&InspectPoint {
-                delay: problem_voice.len() as isize - point.delay - 1,
-                ..point
-            }]
-            - self.partial_card_voice_norm[&InspectPoint {
-                delay: -point.delay - 1,
-                ..point
-            }])
-            .as_u32()
+            + self.precalc.get(
+                point.using_voice,
+                problem_voice.len() as isize - point.delay - 1,
+            )
+            - self.precalc.get(point.using_voice, -point.delay - 1))
+        .as_u32()
     }
 
     pub fn find_points(&self, solutions: usize, problem_voice: &AudioVec) -> Vec<InspectPoint> {
