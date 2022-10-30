@@ -11,9 +11,9 @@ pub fn mul_u32x4(a: u32x4, b: u32x4, inv_n: u32x4, m1: u32x4) -> u32x4 {
 
 #[inline]
 fn mul_hi_u32x4(a: u32x4, b: u32x4) -> u32x4 {
-    let a_inner = cast::<_, i32x8>(a).to_array();
+    let a_inner = cast::<_, i32x4>(a).to_array();
     let a13 = i32x4::new([a_inner[1], a_inner[1], a_inner[3], a_inner[3]]);
-    let b_inner = cast::<_, i32x8>(b).to_array();
+    let b_inner = cast::<_, i32x4>(b).to_array();
     let b13 = i32x4::new([b_inner[1], b_inner[1], b_inner[3], b_inner[3]]);
     let prod02 = cast::<_, i32x4>(a * b).to_array();
     let prod13 = cast::<_, i32x4>(a13 * b13).to_array();
