@@ -55,7 +55,6 @@ impl Loss {
     /// `problem_voice` は `card_voices` のうちからいくつかが選ばれて, 時間をずらして重ね合わせたもの
     #[inline]
     pub fn evaluate(&mut self, problem_voice: &AudioVec, point: InspectPoint) -> u32 {
-        info!("start to evaluate: {:?}", point);
         let convolution = self
             .convolution_cache
             .entry(point.using_voice)
@@ -70,13 +69,15 @@ impl Loss {
                 .copied()
                 .unwrap_or_else(ModInt998244353::zero)
         };
-        (problem_voice.squared_norm() - ModInt998244353::new(2) * convolution_at
+        let score = (problem_voice.squared_norm() - ModInt998244353::new(2) * convolution_at
             + self.precalc.get(
                 point.using_voice,
                 problem_voice.len() as isize - point.delay - 1,
             )
             - self.precalc.get(point.using_voice, -point.delay - 1))
-        .as_u32()
+        .as_u32();
+        info!("{score} at {point:?}");
+        score
     }
 
     pub fn find_points(&mut self, solutions: usize, problem_voice: &AudioVec) -> Vec<InspectPoint> {
