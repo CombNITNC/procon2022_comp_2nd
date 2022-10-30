@@ -50,6 +50,6 @@ impl Precalculation {
         self.table[&using]
             .get(delay.max(0) as usize)
             .copied()
-            .unwrap_or(ModInt998244353::zero())
+            .unwrap_or_else(ModInt998244353::zero)
     }
 }

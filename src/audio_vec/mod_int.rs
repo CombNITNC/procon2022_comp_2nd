@@ -37,8 +37,6 @@ fn const_test_998244353() {
     assert_eq!(ModInt998244353::R2, 0x378DFBC6);
 }
 
-pub type ModInt924844033 = ModInt<924844033>;
-
 /// MOD を法として 2^32 を掛けたモンゴメリ表現. MOD は素数であることが期待される.
 #[derive(
     Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize,

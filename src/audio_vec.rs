@@ -128,11 +128,6 @@ impl AudioVec {
     }
 
     #[inline]
-    pub fn inner_cross(&self, other: &Self) -> ModInt998244353 {
-        self.iter().zip(other.iter()).map(|(&a, &b)| a * b).sum()
-    }
-
-    #[inline]
     pub fn squared_norm(&self) -> ModInt998244353 {
         self.squared().sum()
     }
