@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{cell::RefCell, collections::HashMap};
 
 use log::info;
 use num::Zero;
@@ -27,7 +27,7 @@ pub struct Loss {
     precalc: Precalculation,
     /// 数論変換のための前計算オブジェクト
     ntt: Ntt,
-    convolution_cache: HashMap<CardVoiceIndex, Vec<ModInt998244353>>,
+    convolution_cache: RefCell<HashMap<CardVoiceIndex, Vec<ModInt998244353>>>,
 }
 
 impl Loss {
@@ -46,7 +46,7 @@ impl Loss {
             flipped_card_voices,
             precalc,
             ntt: Ntt::new(),
-            convolution_cache: HashMap::new(),
+            convolution_cache: HashMap::new().into(),
         }
     }
 
@@ -54,13 +54,11 @@ impl Loss {
     ///
     /// `problem_voice` は `card_voices` のうちからいくつかが選ばれて, 時間をずらして重ね合わせたもの
     #[inline]
-    pub fn evaluate(&mut self, problem_voice: &AudioVec, point: InspectPoint) -> u32 {
-        let convolution = self
-            .convolution_cache
-            .entry(point.using_voice)
-            .or_insert_with(|| {
-                problem_voice.convolution(&self.flipped_card_voices[&point.using_voice], &self.ntt)
-            });
+    pub fn evaluate(&self, problem_voice: &AudioVec, point: InspectPoint) -> u32 {
+        let mut borrowed_cache = self.convolution_cache.borrow_mut();
+        let convolution = borrowed_cache.entry(point.using_voice).or_insert_with(|| {
+            problem_voice.convolution(&self.flipped_card_voices[&point.using_voice], &self.ntt)
+        });
         let convolution_at = if point.delay < 0 {
             ModInt998244353::zero()
         } else {
@@ -69,35 +67,35 @@ impl Loss {
                 .copied()
                 .unwrap_or_else(ModInt998244353::zero)
         };
-        let score = (problem_voice.squared_norm() - ModInt998244353::new(2) * convolution_at
+        (problem_voice.squared_norm() - ModInt998244353::new(2) * convolution_at
             + self.precalc.get(
                 point.using_voice,
                 problem_voice.len() as isize - point.delay - 1,
             )
             - self.precalc.get(point.using_voice, -point.delay - 1))
-        .as_u32();
-        info!("{score} at {point:?}");
-        score
+        .as_u32()
     }
 
     pub fn find_points(&mut self, solutions: usize, problem_voice: &AudioVec) -> Vec<InspectPoint> {
         let points_by_loss: Vec<_> = {
-            let mut points: Vec<_> = self
-                .card_voices
-                .iter()
-                .flat_map(|(&using, card_voice)| {
-                    (-(card_voice.len() as isize)..problem_voice.len() as isize).map(move |delay| {
-                        InspectPoint {
-                            using_voice: using,
-                            delay,
-                        }
-                    })
+            let points = self.card_voices.iter().flat_map(|(&using, card_voice)| {
+                let stride = card_voice.len() - problem_voice.len();
+                (-(stride as isize)..0).map(move |delay| InspectPoint {
+                    using_voice: using,
+                    delay,
                 })
+            });
+            let mut point_scores: Vec<_> = points
+                .map(|p| (p, self.evaluate(problem_voice, p)))
                 .collect();
-            points.sort_unstable_by_key(|&p| self.evaluate(problem_voice, p));
-            points
+            point_scores.sort_unstable_by_key(|&p| p.1);
+            point_scores
         };
-        let first_answer = points_by_loss[..solutions].to_vec();
+        let first_answer: Vec<_> = points_by_loss[..solutions]
+            .iter()
+            .map(|(p, _)| p)
+            .copied()
+            .collect();
 
         info!("first answer is: {:?}", first_answer);
 
@@ -107,7 +105,7 @@ impl Loss {
         }
 
         // 違うようなので, 最初の解から 1 つだけ取り除いて別の解を探す
-        for &next_candidate in &points_by_loss[solutions..] {
+        for &(next_candidate, _) in &points_by_loss[solutions..] {
             for to_remove in 0..first_answer.len() {
                 let next_answer = {
                     let mut list = first_answer.clone();
