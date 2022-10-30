@@ -36,7 +36,7 @@ fn main() -> anyhow::Result<()> {
     }
 }
 
-fn run_solver(mut loss: Loss, requester: &impl Requester) -> anyhow::Result<()> {
+fn run_solver(loss: Loss, requester: &impl Requester) -> anyhow::Result<()> {
     let problem_info = requester.get_problem()?;
 
     info!("got problem: {:?}", problem_info);

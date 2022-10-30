@@ -46,14 +46,10 @@ impl Precalculation {
         Self { table }
     }
 
-    pub fn get(&self, using: CardVoiceIndex, delay: isize) -> ModInt998244353 {
-        if delay < 0 {
-            ModInt998244353::zero()
-        } else {
-            self.table[&using]
-                .get(delay as usize)
-                .copied()
-                .unwrap_or_else(ModInt998244353::zero)
-        }
+    pub fn get(&self, using: CardVoiceIndex, delay: usize) -> ModInt998244353 {
+        self.table[&using]
+            .get(delay as usize)
+            .copied()
+            .unwrap_or_else(ModInt998244353::zero)
     }
 }

@@ -133,16 +133,9 @@ impl AudioVec {
     }
 
     #[inline]
-    pub fn delayed(&self, time: isize) -> Self {
-        if 0 <= time {
-            let time = time as usize;
-            let mut new = vec![Default::default(); time + self.vec.len()];
-            new[time..].copy_from_slice(&self.vec);
-            Self { vec: new }
-        } else {
-            Self {
-                vec: self.vec[(-time) as usize..].to_vec(),
-            }
+    pub fn delayed(&self, time: usize) -> Self {
+        Self {
+            vec: self.vec[time..].to_vec(),
         }
     }
 
