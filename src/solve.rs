@@ -113,14 +113,17 @@ impl Loss {
         todo!()
     }
 
-    fn validate(&self, problem_voice: &AudioVec, first_answer: &[InspectPoint]) -> bool {
+    fn validate(&self, problem_voice: &AudioVec, answer: &[InspectPoint]) -> bool {
         let mut composed = AudioVec::default();
         composed.resize(problem_voice.len());
-        for &InspectPoint { using_voice, delay } in first_answer {
+        for &InspectPoint { using_voice, delay } in answer {
             composed.add_assign(&self.card_voices[&using_voice].delayed(delay));
         }
         composed.clip();
-        const THRESHOLD: u32 = 100;
-        problem_voice.sub(&composed).squared_norm().as_u32() < THRESHOLD
+
+        let composed_norm = problem_voice.sub(&composed).squared_norm();
+        info!("validation : score of {answer:?} is\n\t{composed_norm:?}");
+        let threshold = ModInt998244353::new(10);
+        composed_norm < threshold
     }
 }
