@@ -24,6 +24,7 @@ pub fn load_all_jk() -> io::Result<HashMap<CardVoiceIndex, AudioVec>> {
     Ok(map)
 }
 
+/// 読み札の音声ごとに, その音声を 2 乗したものの累積和を前計算して格納する.
 #[derive(Debug)]
 pub struct Precalculation {
     table: HashMap<CardVoiceIndex, Vec<ModInt998244353>>,
@@ -46,10 +47,10 @@ impl Precalculation {
         Self { table }
     }
 
-    pub fn get(&self, using: CardVoiceIndex, delay: usize) -> ModInt998244353 {
-        self.table[&using]
-            .get(delay as usize)
-            .copied()
+    pub fn get(&self, using: CardVoiceIndex, delay: isize) -> ModInt998244353 {
+        (0 <= delay)
+            .then(|| self.table[&using].get(delay as usize).copied())
+            .flatten()
             .unwrap_or_else(ModInt998244353::zero)
     }
 }

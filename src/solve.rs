@@ -15,7 +15,7 @@ pub mod card_voice;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct InspectPoint {
     pub using_voice: CardVoiceIndex,
-    pub delay: usize,
+    pub delay: isize,
 }
 
 /// 損失関数のオブジェクト
@@ -55,25 +55,25 @@ impl Loss {
     pub fn evaluate(&self, problem_voice: &AudioVec, using_voice: CardVoiceIndex) -> InspectPoint {
         let convolution =
             problem_voice.convolution(&self.flipped_card_voices[&using_voice], &self.ntt);
-        let stride = self.card_voices[&using_voice].len() - problem_voice.len();
+        let stride = (self.card_voices[&using_voice].len() - problem_voice.len()) as isize;
         let squared_norm = problem_voice.squared_norm();
 
         let mut min_score = u32::MAX;
         let mut min_delay = 0;
-        for delay in 0..stride {
-            let convolution_at = convolution
-                .get(delay)
-                .copied()
+        for delay in -(problem_voice.len() as isize)..stride {
+            let convolution_at = (0 <= delay)
+                .then(|| convolution.get(delay as usize).copied())
+                .flatten()
                 .unwrap_or_else(ModInt998244353::zero);
             let score = (squared_norm - ModInt998244353::new(2) * convolution_at
                 + self
                     .precalc
-                    .get(using_voice, problem_voice.len() + delay - 1)
-                - self.precalc.get(using_voice, delay - 1))
+                    .get(using_voice, (problem_voice.len() as isize) - delay)
+                - self.precalc.get(using_voice, -delay))
             .as_u32();
             if score < min_score {
                 min_score = score;
-                min_delay = delay
+                min_delay = delay;
             }
         }
         info!("({min_score}, {min_delay}) using {using_voice}");
