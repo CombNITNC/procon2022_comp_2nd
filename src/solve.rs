@@ -16,6 +16,7 @@ pub mod card_voice;
 pub struct InspectPoint {
     pub using_voice: CardVoiceIndex,
     pub delay: isize,
+    pub score: u32,
 }
 
 /// 損失関数のオブジェクト
@@ -80,13 +81,17 @@ impl Loss {
         InspectPoint {
             using_voice,
             delay: min_delay,
+            score: min_score,
         }
     }
 
     pub fn find_points(&self, solutions: usize, problem_voice: &AudioVec) -> Vec<InspectPoint> {
-        let points_by_loss: Vec<_> = CardVoiceIndex::all()
+        let mut points_by_loss: Vec<_> = CardVoiceIndex::all()
             .map(|index| self.evaluate(problem_voice, index))
             .collect();
+        points_by_loss.sort_unstable_by_key(|point| point.score);
+        let points_by_loss = points_by_loss;
+
         let first_answer = &points_by_loss[..solutions];
 
         info!("first answer is: {:?}", first_answer);
@@ -116,7 +121,10 @@ impl Loss {
     fn validate(&self, problem_voice: &AudioVec, answer: &[InspectPoint]) -> bool {
         let mut composed = AudioVec::default();
         composed.resize(problem_voice.len());
-        for &InspectPoint { using_voice, delay } in answer {
+        for &InspectPoint {
+            using_voice, delay, ..
+        } in answer
+        {
             composed.add_assign(&self.card_voices[&using_voice].delayed(delay));
         }
         composed.clip();
