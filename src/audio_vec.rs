@@ -1,5 +1,6 @@
 use std::ops::{Index, IndexMut};
 
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use wide::{u32x4, u32x8};
 
@@ -207,14 +208,16 @@ impl AudioVec {
 impl AudioVec {
     #[inline]
     pub fn from_pcm(path: &[i16]) -> Self {
-        // プリエンファシス
-        let emphasized = path.windows(2).map(|win| {
-            ModInt998244353::new(
-                (win[1] as i64 - win[0] as i64 * 97 / 100 + i16::MAX as i64)
-                    .try_into()
-                    .unwrap(),
-            )
-        });
+        let emphasized = path
+            .iter()
+            // バイアス
+            .map(|&x| (x as i64) + i16::MAX as i64)
+            .tuple_windows()
+            // プリエンファシス
+            .map(|(curr, next)| next - curr * 97 / 100)
+            // ポストバイアス
+            .map(|x| x + i32::MAX as i64)
+            .map(|x| ModInt998244353::new(x.try_into().unwrap_or_else(|_| panic!("{x}"))));
 
         Self {
             vec: emphasized.collect(),
