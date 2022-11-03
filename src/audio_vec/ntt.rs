@@ -1,9 +1,8 @@
+use itertools::izip;
 use num::traits::Pow;
-use wide::{u32x4, u32x8};
 
-use super::{mod_int::ModInt998244353, AudioVec};
+use super::mod_int::ModInt998244353;
 
-mod montgomery;
 #[cfg(test)]
 mod tests;
 
@@ -54,7 +53,7 @@ impl Ntt {
         }
     }
 
-    pub fn transform(&self, vec: &mut AudioVec) {
+    pub fn transform(&self, vec: &mut [ModInt998244353]) {
         if vec.is_empty() {
             return;
         }
@@ -68,197 +67,50 @@ impl Ntt {
 
         if k % 2 != 0 {
             let v = 1 << (k - 1);
-            if v < 8 {
-                for j in 0..v {
-                    let jv = vec[j + v];
-                    vec[j + v] = vec[j] - jv;
-                    vec[j] += jv;
-                }
-            } else {
-                let m0 = u32x8::default();
-                let m2 = u32x8::splat(2 * ModInt998244353::N);
-                for j0 in (0..v).step_by(8) {
-                    let j1 = j0 + v;
-                    let t0 = vec.get_u32x8(j0);
-                    let t1 = vec.get_u32x8(j1);
-                    let naj = montgomery::add_u32x8(t0, t1, m2, m0);
-                    let naj_v = montgomery::sub_u32x8(t0, t1, m2, m0);
-                    vec.set_u32x8(j0, naj);
-                    vec.set_u32x8(j1, naj_v);
-                }
+            let (left, right) = vec.split_at_mut(v);
+            for (l, r) in left.iter_mut().zip(right) {
+                let at_l = *l;
+                let at_r = *r;
+                *l = at_l + at_r;
+                *r = at_l - at_r;
             }
         }
 
-        let mut u = 1 << (2 + (k % 2));
         let mut v = 1 << (k - 2 - (k % 2));
         let one = ModInt998244353::new(1);
         let im = self.d_w[1];
 
         while v != 0 {
-            if v == 1 {
-                let mut xx = one;
-                for jh in (0..u).step_by(4) {
-                    let ww = xx * xx;
-                    let wx = ww * xx;
-                    let t0 = vec[jh];
-                    let t1 = vec[jh + 1] * xx;
-                    let t2 = vec[jh + 2] * ww;
-                    let t3 = vec[jh + 3] * wx;
-                    let t0p2 = t0 + t2;
-                    let t1p3 = t1 + t3;
-                    let t0m2 = t0 - t2;
-                    let t1m3 = (t1 - t3) * im;
-                    vec[jh] = t0p2 + t1p3;
-                    vec[jh + 1] = t0p2 - t1p3;
-                    vec[jh + 2] = t0m2 + t1m3;
-                    vec[jh + 3] = t0m2 - t1m3;
-                    xx *= self.d_w[(jh + 4).trailing_zeros() as usize];
-                }
-            } else if v == 4 {
-                let mut xx = one;
-
-                let m0 = u32x4::default();
-                let m1 = u32x4::splat(ModInt998244353::N);
-                let m2 = u32x4::splat(2 * ModInt998244353::N);
-                let inv_mod = u32x4::splat(ModInt998244353::N_PRIME);
-                let im = u32x4::splat(im.as_u32());
-                for jh in (0..u).step_by(4) {
-                    if jh == 0 {
-                        for j0 in (0..v).step_by(4) {
-                            let j1 = j0 + v;
-                            let j2 = j1 + v;
-                            let j3 = j2 + v;
-                            let t0 = vec.get_u32x4(j0);
-                            let t1 = vec.get_u32x4(j1);
-                            let t2 = vec.get_u32x4(j2);
-                            let t3 = vec.get_u32x4(j3);
-                            let t0p2 = montgomery::add_u32x4(t0, t2, m2, m0);
-                            let t1p3 = montgomery::add_u32x4(t1, t3, m2, m0);
-                            let t0m2 = montgomery::sub_u32x4(t0, t2, m2, m0);
-                            let t1m3 = montgomery::mul_u32x4(
-                                montgomery::sub_u32x4(t1, t3, m2, m0),
-                                im,
-                                inv_mod,
-                                m1,
-                            );
-                            vec.set_u32x4(j0, montgomery::add_u32x4(t0p2, t1p3, m2, m0));
-                            vec.set_u32x4(j1, montgomery::sub_u32x4(t0p2, t1p3, m2, m0));
-                            vec.set_u32x4(j2, montgomery::add_u32x4(t0m2, t1m3, m2, m0));
-                            vec.set_u32x4(j3, montgomery::sub_u32x4(t0m2, t1m3, m2, m0));
-                        }
-                    } else {
-                        let ww = xx * xx;
-                        let wx = ww * xx;
-                        let ww = u32x4::splat(ww.as_u32());
-                        let wx = u32x4::splat(wx.as_u32());
-                        let xx = u32x4::splat(xx.as_u32());
-
-                        for j0 in (jh * v..(jh + 1) * v).step_by(4) {
-                            let j1 = j0 + v;
-                            let j2 = j1 + v;
-                            let j3 = j2 + v;
-
-                            let t0 = vec.get_u32x4(j0);
-                            let t1 = vec.get_u32x4(j1);
-                            let t2 = vec.get_u32x4(j2);
-                            let t3 = vec.get_u32x4(j3);
-                            let mt1 = montgomery::mul_u32x4(t1, xx, inv_mod, m1);
-                            let mt2 = montgomery::mul_u32x4(t2, ww, inv_mod, m1);
-                            let mt3 = montgomery::mul_u32x4(t3, wx, inv_mod, m1);
-                            let t0p2 = montgomery::add_u32x4(t0, mt2, m2, m0);
-                            let t1p3 = montgomery::add_u32x4(mt1, mt3, m2, m0);
-                            let t0m2 = montgomery::add_u32x4(t0, mt2, m2, m0);
-                            let t1m3 = montgomery::mul_u32x4(
-                                montgomery::sub_u32x4(mt1, mt3, m2, m0),
-                                im,
-                                inv_mod,
-                                m1,
-                            );
-                            vec.set_u32x4(j0, montgomery::add_u32x4(t0p2, t1p3, m2, m0));
-                            vec.set_u32x4(j1, montgomery::sub_u32x4(t0p2, t1p3, m2, m0));
-                            vec.set_u32x4(j2, montgomery::add_u32x4(t0m2, t1m3, m2, m0));
-                            vec.set_u32x4(j2, montgomery::sub_u32x4(t0m2, t1m3, m2, m0));
-                        }
+            let mut xx = one;
+            for (i, chunk) in vec.chunks_exact_mut(4 * v).enumerate() {
+                let ww = xx * xx;
+                let wx = ww * xx;
+                {
+                    let (chunk0, chunk123) = chunk.split_at_mut(v);
+                    let (chunk1, chunk23) = chunk123.split_at_mut(v);
+                    let (chunk2, chunk3) = chunk23.split_at_mut(v);
+                    for (j0, j1, j2, j3) in izip!(chunk0, chunk1, chunk2, chunk3) {
+                        let t0 = *j0;
+                        let t1 = *j1 * xx;
+                        let t2 = *j2 * ww;
+                        let t3 = *j3 * wx;
+                        let t0p2 = t0 + t2;
+                        let t1p3 = t1 + t3;
+                        let t0m2 = t0 - t2;
+                        let t1m3 = (t1 - t3) * im;
+                        *j0 = t0p2 + t1p3;
+                        *j1 = t0p2 - t1p3;
+                        *j2 = t0m2 + t1m3;
+                        *j3 = t0m2 - t1m3;
                     }
-                    xx *= self.d_w[(jh + 4).trailing_zeros() as usize];
                 }
-            } else {
-                let m0 = u32x8::default();
-                let m1 = u32x8::splat(ModInt998244353::N);
-                let m2 = u32x8::splat(2 * ModInt998244353::N);
-                let inv_mod = u32x8::splat(ModInt998244353::N_PRIME);
-                let im = u32x8::splat(im.as_u32());
-
-                let mut xx = one;
-                for jh in (0..u).step_by(4) {
-                    if jh == 0 {
-                        for j0 in (0..v).step_by(8) {
-                            let j1 = j0 + v;
-                            let j2 = j1 + v;
-                            let j3 = j2 + v;
-
-                            let t0 = vec.get_u32x8(j0);
-                            let t1 = vec.get_u32x8(j1);
-                            let t2 = vec.get_u32x8(j2);
-                            let t3 = vec.get_u32x8(j3);
-                            let t0p2 = montgomery::add_u32x8(t0, t1, m2, m0);
-                            let t1p3 = montgomery::add_u32x8(t1, t3, m2, m0);
-                            let t0m2 = montgomery::sub_u32x8(t0, t2, m2, m0);
-                            let t1m3 = montgomery::mul_u32x8(
-                                montgomery::sub_u32x8(t1, t3, m2, m0),
-                                im,
-                                inv_mod,
-                                m1,
-                            );
-                            vec.set_u32x8(j0, montgomery::add_u32x8(t0p2, t1p3, m2, m0));
-                            vec.set_u32x8(j1, montgomery::sub_u32x8(t0p2, t1p3, m2, m0));
-                            vec.set_u32x8(j2, montgomery::add_u32x8(t0m2, t1m3, m2, m0));
-                            vec.set_u32x8(j3, montgomery::sub_u32x8(t0m2, t1m3, m2, m0));
-                        }
-                    } else {
-                        let ww = xx * xx;
-                        let wx = ww * xx;
-                        let ww = u32x8::splat(ww.as_u32());
-                        let wx = u32x8::splat(wx.as_u32());
-                        let xx = u32x8::splat(xx.as_u32());
-
-                        for j0 in (jh * v..(jh + 1) * v).step_by(8) {
-                            let j1 = j0 + v;
-                            let j2 = j1 + v;
-                            let j3 = j2 + v;
-
-                            let t0 = vec.get_u32x8(j0);
-                            let t1 = vec.get_u32x8(j1);
-                            let t2 = vec.get_u32x8(j2);
-                            let t3 = vec.get_u32x8(j3);
-                            let mt1 = montgomery::mul_u32x8(t1, xx, inv_mod, m1);
-                            let mt2 = montgomery::mul_u32x8(t2, ww, inv_mod, m1);
-                            let mt3 = montgomery::mul_u32x8(t3, wx, inv_mod, m1);
-                            let t0p2 = montgomery::add_u32x8(t0, mt2, m2, m0);
-                            let t1p3 = montgomery::add_u32x8(mt1, mt3, m2, m0);
-                            let t0m2 = montgomery::sub_u32x8(t0, mt2, m2, m0);
-                            let t1m3 = montgomery::mul_u32x8(
-                                montgomery::sub_u32x8(mt1, mt3, m2, m0),
-                                im,
-                                inv_mod,
-                                m1,
-                            );
-                            vec.set_u32x8(j0, montgomery::add_u32x8(t0p2, t1p3, m2, m0));
-                            vec.set_u32x8(j1, montgomery::sub_u32x8(t0p2, t1p3, m2, m0));
-                            vec.set_u32x8(j2, montgomery::add_u32x8(t0m2, t1m3, m2, m0));
-                            vec.set_u32x8(j3, montgomery::sub_u32x8(t0m2, t1m3, m2, m0));
-                        }
-                    }
-                    xx *= self.d_w[(jh + 4).trailing_zeros() as usize];
-                }
+                xx *= self.d_w[((i + 1) * 4).trailing_zeros() as usize];
             }
-
-            u <<= 2;
             v >>= 2;
         }
     }
 
-    pub fn inverse_transform(&self, vec: &mut AudioVec) {
+    pub fn inverse_transform(&self, vec: &mut [ModInt998244353]) {
         if vec.is_empty() {
             return;
         }
@@ -268,8 +120,6 @@ impl Ntt {
             let a1 = vec[1];
             vec[1] = vec[0] - vec[1];
             vec[0] += a1;
-            vec[0] *= ModInt998244353::new(2).inv();
-            vec[1] *= ModInt998244353::new(2).inv();
             return;
         }
 
@@ -277,238 +127,44 @@ impl Ntt {
         let mut v = 1;
         let one = ModInt998244353::new(1);
         let im = self.d_inv_w[1];
+
         while u != 0 {
-            if v == 1 {
-                let mut xx = one;
-                u <<= 2;
-                for jh in (0..u).step_by(4) {
-                    let ww = xx * xx;
-                    let yy = xx * im;
-                    let t0 = vec[jh];
-                    let t1 = vec[jh + 1];
-                    let t2 = vec[jh + 2];
-                    let t3 = vec[jh + 3];
+            let mut xx = one;
+            for (i, chunk) in vec.chunks_exact_mut(4 * v).enumerate() {
+                let ww = xx * xx;
+                let yy = xx * im;
+                let (chunk0, chunk123) = chunk.split_at_mut(v);
+                let (chunk1, chunk23) = chunk123.split_at_mut(v);
+                let (chunk2, chunk3) = chunk23.split_at_mut(v);
+                for (j0, j1, j2, j3) in izip!(chunk0, chunk1, chunk2, chunk3) {
+                    let t0 = *j0;
+                    let t1 = *j1;
+                    let t2 = *j2;
+                    let t3 = *j3;
                     let t0p1 = t0 + t1;
                     let t2p3 = t2 + t3;
                     let t0m1 = (t0 - t1) * xx;
                     let t2m3 = (t2 - t3) * yy;
-                    vec[jh] = t0p1 + t2p3;
-                    vec[jh + 1] = t0m1 + t2m3;
-                    vec[jh + 2] = (t0p1 - t2p3) * ww;
-                    vec[jh + 3] = (t0m1 - t2m3) * ww;
-                    xx *= self.d_inv_w[(jh + 4).trailing_zeros() as usize];
+                    *j0 = t0p1 + t2p3;
+                    *j1 = t0m1 + t2m3;
+                    *j2 = (t0p1 - t2p3) * ww;
+                    *j3 = (t0m1 - t2m3) * ww;
                 }
-            } else if v == 4 {
-                let m0 = u32x4::default();
-                let m1 = u32x4::splat(ModInt998244353::N);
-                let m2 = u32x4::splat(2 * ModInt998244353::N);
-                let inv_mod = u32x4::splat(ModInt998244353::N_PRIME);
-
-                let mut xx = one;
-                u <<= 2;
-                for jh in (0..u).step_by(4) {
-                    if jh == 0 {
-                        let im = u32x4::splat(im.as_u32());
-
-                        for j0 in (0..v).step_by(4) {
-                            let j1 = j0 + v;
-                            let j2 = j1 + v;
-                            let j3 = j2 + v;
-
-                            let t0 = vec.get_u32x4(j0);
-                            let t1 = vec.get_u32x4(j1);
-                            let t2 = vec.get_u32x4(j2);
-                            let t3 = vec.get_u32x4(j3);
-                            let t0p1 = montgomery::add_u32x4(t0, t1, m2, m0);
-                            let t2p3 = montgomery::add_u32x4(t2, t3, m2, m0);
-                            let t0m1 = montgomery::sub_u32x4(t0, t1, m2, m0);
-                            let t2m3 = montgomery::mul_u32x4(
-                                montgomery::sub_u32x4(t2, t3, m2, m0),
-                                im,
-                                inv_mod,
-                                m1,
-                            );
-                            vec.set_u32x4(j0, montgomery::add_u32x4(t0p1, t2p3, m2, m0));
-                            vec.set_u32x4(j1, montgomery::add_u32x4(t0m1, t2m3, m2, m0));
-                            vec.set_u32x4(j2, montgomery::sub_u32x4(t0p1, t2p3, m2, m0));
-                            vec.set_u32x4(j3, montgomery::sub_u32x4(t0m1, t2m3, m2, m0));
-                        }
-                    } else {
-                        let ww = xx * xx;
-                        let yy = xx * im;
-                        let ww = u32x4::splat(ww.as_u32());
-                        let xx = u32x4::splat(xx.as_u32());
-                        let yy = u32x4::splat(yy.as_u32());
-
-                        for j0 in (jh * v..(jh + 1) * v).step_by(4) {
-                            let j1 = j0 + v;
-                            let j2 = j1 + v;
-                            let j3 = j2 + v;
-
-                            let t0 = vec.get_u32x4(j0);
-                            let t1 = vec.get_u32x4(j1);
-                            let t2 = vec.get_u32x4(j2);
-                            let t3 = vec.get_u32x4(j3);
-                            let t0p1 = montgomery::add_u32x4(t0, t1, m2, m0);
-                            let t2p3 = montgomery::add_u32x4(t2, t3, m2, m0);
-                            let t0m1 = montgomery::mul_u32x4(
-                                montgomery::sub_u32x4(t0, t1, m2, m0),
-                                xx,
-                                inv_mod,
-                                m1,
-                            );
-                            let t2m3 = montgomery::mul_u32x4(
-                                montgomery::sub_u32x4(t2, t3, m2, m0),
-                                yy,
-                                inv_mod,
-                                m1,
-                            );
-                            vec.set_u32x4(j0, montgomery::add_u32x4(t0p1, t2p3, m2, m0));
-                            vec.set_u32x4(j1, montgomery::add_u32x4(t0m1, t2m3, m2, m0));
-                            vec.set_u32x4(
-                                j2,
-                                montgomery::mul_u32x4(
-                                    montgomery::sub_u32x4(t0p1, t2p3, m2, m0),
-                                    ww,
-                                    inv_mod,
-                                    m1,
-                                ),
-                            );
-                            vec.set_u32x4(
-                                j3,
-                                montgomery::mul_u32x4(
-                                    montgomery::sub_u32x4(t0m1, t2m3, m2, m0),
-                                    ww,
-                                    inv_mod,
-                                    m1,
-                                ),
-                            );
-                        }
-                    }
-                    xx *= self.d_inv_w[(jh + 4).trailing_zeros() as usize];
-                }
-            } else {
-                let m0 = u32x8::default();
-                let m1 = u32x8::splat(ModInt998244353::N);
-                let m2 = u32x8::splat(ModInt998244353::N);
-                let mod_inv = u32x8::splat(ModInt998244353::N_PRIME);
-
-                let mut xx = one;
-                u <<= 2;
-                for jh in (0..u).step_by(4) {
-                    if jh == 0 {
-                        let im = u32x8::splat(im.as_u32());
-
-                        for j0 in (0..v).step_by(8) {
-                            let j1 = j0 + v;
-                            let j2 = j1 + v;
-                            let j3 = j2 + v;
-
-                            let t0 = vec.get_u32x8(j0);
-                            let t1 = vec.get_u32x8(j1);
-                            let t2 = vec.get_u32x8(j2);
-                            let t3 = vec.get_u32x8(j3);
-                            let t0p1 = montgomery::add_u32x8(t0, t1, m2, m0);
-                            let t2p3 = montgomery::add_u32x8(t2, t3, m2, m0);
-                            let t0m1 = montgomery::sub_u32x8(t0, t1, m2, m0);
-                            let t2m3 = montgomery::mul_u32x8(
-                                montgomery::sub_u32x8(t2, t3, m2, m0),
-                                im,
-                                mod_inv,
-                                m1,
-                            );
-                            vec.set_u32x8(j0, montgomery::add_u32x8(t0p1, t2p3, m2, m0));
-                            vec.set_u32x8(j1, montgomery::add_u32x8(t0m1, t2m3, m2, m0));
-                            vec.set_u32x8(j2, montgomery::sub_u32x8(t0p1, t2p3, m2, m0));
-                            vec.set_u32x8(j3, montgomery::sub_u32x8(t0m1, t2m3, m2, m0));
-                        }
-                    } else {
-                        let ww = xx * xx;
-                        let yy = xx * im;
-                        let ww = u32x8::splat(ww.as_u32());
-                        let xx = u32x8::splat(xx.as_u32());
-                        let yy = u32x8::splat(yy.as_u32());
-
-                        for j0 in (jh * v..(jh + 1) * v).step_by(8) {
-                            let j1 = j0 + v;
-                            let j2 = j1 + v;
-                            let j3 = j2 + v;
-
-                            let t0 = vec.get_u32x8(j0);
-                            let t1 = vec.get_u32x8(j1);
-                            let t2 = vec.get_u32x8(j2);
-                            let t3 = vec.get_u32x8(j3);
-                            let t0p1 = montgomery::add_u32x8(t0, t1, m2, m0);
-                            let t2p3 = montgomery::add_u32x8(t2, t3, m2, m0);
-                            let t0m1 = montgomery::mul_u32x8(
-                                montgomery::sub_u32x8(t0, t1, m2, m0),
-                                xx,
-                                mod_inv,
-                                m1,
-                            );
-                            let t2m3 = montgomery::mul_u32x8(
-                                montgomery::sub_u32x8(t2, t3, m2, m0),
-                                yy,
-                                mod_inv,
-                                m1,
-                            );
-                            vec.set_u32x8(j0, montgomery::add_u32x8(t0p1, t2p3, m2, m0));
-                            vec.set_u32x8(j1, montgomery::add_u32x8(t0m1, t2m3, m2, m0));
-                            vec.set_u32x8(
-                                j2,
-                                montgomery::mul_u32x8(
-                                    montgomery::sub_u32x8(t0p1, t2p3, m2, m0),
-                                    ww,
-                                    mod_inv,
-                                    m1,
-                                ),
-                            );
-                            vec.set_u32x8(
-                                j3,
-                                montgomery::mul_u32x8(
-                                    montgomery::sub_u32x8(t0m1, t2m3, m2, m0),
-                                    ww,
-                                    mod_inv,
-                                    m1,
-                                ),
-                            );
-                        }
-                    }
-                    xx *= self.d_inv_w[(jh + 4).trailing_zeros() as usize];
-                }
+                xx *= self.d_inv_w[((i + 1) * 4).trailing_zeros() as usize];
             }
-            u >>= 4;
+            u >>= 2;
             v <<= 2;
         }
 
-        if k % 2 == 1 {
-            v = 1 << (k - 1);
-            if v < 8 {
-                for j in 0..v {
-                    let ajv = vec[j + v];
-                    let aj_ajv = vec[j] - vec[j + v];
-                    vec[j] += ajv;
-                    vec[j + v] = aj_ajv;
-                }
-            } else {
-                let m0 = u32x8::default();
-                let m2 = u32x8::splat(2 * ModInt998244353::N);
-
-                for j0 in (0..v).step_by(8) {
-                    let j1 = j0 + v;
-
-                    let t0 = vec.get_u32x8(j0);
-                    let t1 = vec.get_u32x8(j1);
-                    let naj = montgomery::add_u32x8(t0, t1, m2, m0);
-                    let naj_v = montgomery::sub_u32x8(t0, t1, m2, m0);
-                    vec.set_u32x8(j0, naj);
-                    vec.set_u32x8(j1, naj_v);
-                }
+        if k % 2 != 0 {
+            let u = 1 << (k - 1);
+            let (left, right) = vec.split_at_mut(u);
+            for (l, r) in left.iter_mut().zip(right) {
+                let at_l = *l;
+                let at_r = *r;
+                *l = at_l + at_r;
+                *r = at_l - at_r;
             }
-        }
-        let inv_len = ModInt998244353::new(vec.len() as u32).inv();
-        for val in vec.iter_mut() {
-            *val *= inv_len;
         }
     }
 }

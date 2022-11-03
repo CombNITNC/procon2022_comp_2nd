@@ -2,7 +2,6 @@ use std::ops::{Index, IndexMut};
 
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use wide::{u32x4, u32x8};
 
 use self::mod_int::ModInt998244353;
 
@@ -12,7 +11,7 @@ pub mod ntt;
 /// 音声データのベクトル.
 #[derive(Debug, Default, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct AudioVec {
-    vec: Vec<ModInt998244353>,
+    pub vec: Vec<ModInt998244353>,
 }
 
 impl Index<usize> for AudioVec {
@@ -32,66 +31,8 @@ impl IndexMut<usize> for AudioVec {
 
 impl AudioVec {
     #[inline]
-    pub fn len(&self) -> usize {
-        self.vec.len()
-    }
-
-    #[inline]
-    pub fn is_empty(&self) -> bool {
-        self.vec.is_empty()
-    }
-
-    #[inline]
-    pub fn iter(&self) -> impl Iterator<Item = &ModInt998244353> {
-        self.vec.iter()
-    }
-
-    #[inline]
-    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut ModInt998244353> {
-        self.vec.iter_mut()
-    }
-
-    #[inline]
-    pub fn get_u32x4(&self, idx: usize) -> u32x4 {
-        u32x4::new([
-            self.vec[idx].as_u32(),
-            self.vec[idx + 1].as_u32(),
-            self.vec[idx + 2].as_u32(),
-            self.vec[idx + 3].as_u32(),
-        ])
-    }
-
-    #[inline]
-    pub fn set_u32x4(&mut self, idx: usize, val: u32x4) {
-        let arr = val.to_array().map(ModInt998244353::new);
-        self.vec[idx..idx + 4].copy_from_slice(&arr)
-    }
-
-    #[inline]
-    pub fn get_u32x8(&self, idx: usize) -> u32x8 {
-        u32x8::new([
-            self.vec[idx].as_u32(),
-            self.vec[idx + 1].as_u32(),
-            self.vec[idx + 2].as_u32(),
-            self.vec[idx + 3].as_u32(),
-            self.vec[idx + 4].as_u32(),
-            self.vec[idx + 5].as_u32(),
-            self.vec[idx + 6].as_u32(),
-            self.vec[idx + 7].as_u32(),
-        ])
-    }
-
-    #[inline]
-    pub fn set_u32x8(&mut self, idx: usize, val: u32x8) {
-        let arr = val.to_array().map(ModInt998244353::new);
-        self.vec[idx..idx + 8].copy_from_slice(&arr)
-    }
-}
-
-impl AudioVec {
-    #[inline]
     pub fn add(&self, other: &Self) -> Self {
-        if self.len() < other.len() {
+        if self.vec.len() < other.vec.len() {
             return other.add(self);
         }
         let mut cloned = self.clone();
@@ -101,14 +42,14 @@ impl AudioVec {
 
     #[inline]
     pub fn add_assign(&mut self, other: &Self) {
-        for (write, to_add) in self.iter_mut().zip(other.iter()) {
+        for (write, to_add) in self.vec.iter_mut().zip(other.vec.iter()) {
             *write += *to_add;
         }
     }
 
     #[inline]
     pub fn sub(&self, other: &Self) -> Self {
-        if self.len() < other.len() {
+        if self.vec.len() < other.vec.len() {
             return other.add(self);
         }
         let mut cloned = self.clone();
@@ -118,14 +59,14 @@ impl AudioVec {
 
     #[inline]
     pub fn sub_assign(&mut self, other: &Self) {
-        for (write, to_add) in self.iter_mut().zip(other.iter()) {
+        for (write, to_add) in self.vec.iter_mut().zip(other.vec.iter()) {
             *write -= *to_add;
         }
     }
 
     #[inline]
     pub fn squared(&self) -> impl Iterator<Item = ModInt998244353> + '_ {
-        self.iter().map(|&a| a * a)
+        self.vec.iter().map(|&a| a * a)
     }
 
     #[inline]
@@ -154,7 +95,7 @@ impl AudioVec {
 
     #[inline]
     pub fn clip(&mut self) {
-        for elem in self.iter_mut() {
+        for elem in self.vec.iter_mut() {
             *elem = (*elem).min(ModInt998244353::new(u16::MAX as u32));
         }
     }
@@ -166,16 +107,16 @@ impl AudioVec {
 
     #[inline]
     pub fn convolution(&self, other: &Self, ntt: &ntt::Ntt) -> Vec<ModInt998244353> {
-        if self.is_empty() && other.is_empty() {
+        if self.vec.is_empty() && other.vec.is_empty() {
             return vec![];
         }
 
-        let len = self.len() + other.len() - 1;
-        if self.len().min(other.len()) <= 40 {
+        let len = self.vec.len() + other.vec.len() - 1;
+        if self.vec.len().min(other.vec.len()) <= 40 {
             // too tiny vectors
             let mut res = vec![ModInt998244353::default(); len];
-            for (i, &left) in self.iter().enumerate() {
-                for (j, &right) in other.iter().enumerate() {
+            for (i, &left) in self.vec.iter().enumerate() {
+                for (j, &right) in other.vec.iter().enumerate() {
                     res[i + j] += left * right;
                 }
             }
@@ -189,16 +130,16 @@ impl AudioVec {
         buf2.resize(buf_len);
 
         // 畳み込み計算は数論変換してから乗算して逆数論変換する
-        ntt.transform(&mut buf1);
-        ntt.transform(&mut buf2);
-        for (elem1, elem2) in buf1.iter_mut().zip(buf2.iter_mut()) {
+        ntt.transform(&mut buf1.vec);
+        ntt.transform(&mut buf2.vec);
+        for (elem1, elem2) in buf1.vec.iter_mut().zip(buf2.vec.iter_mut()) {
             *elem1 *= *elem2;
         }
-        ntt.inverse_transform(&mut buf1);
+        ntt.inverse_transform(&mut buf1.vec);
 
         // 数論変換で変化した定数倍を戻す
         let inv = ModInt998244353::new(buf_len as u32).inv();
-        for elem in buf1.iter_mut() {
+        for elem in buf1.vec.iter_mut() {
             *elem *= inv;
         }
         buf1.vec
