@@ -1,4 +1,3 @@
-use itertools::izip;
 use num::traits::Pow;
 
 use super::mod_int::ModInt998244353;
@@ -11,160 +10,74 @@ const LEVEL: usize = (ModInt998244353::N - 1).trailing_zeros() as usize;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Ntt {
-    primitive_root: ModInt998244353,
-    d_w: [ModInt998244353; LEVEL],
-    d_inv_w: [ModInt998244353; LEVEL],
+    root_of_power_of_2: [ModInt998244353; LEVEL],
+    inv_root_of_power_of_2: [ModInt998244353; LEVEL],
 }
 
 impl Ntt {
     pub fn new() -> Self {
         let modulo = ModInt998244353::N;
         let primitive_root = primitive_root(modulo);
-
-        let mut w = [ModInt998244353::default(); LEVEL];
-        let mut d_w = [ModInt998244353::default(); LEVEL];
-        let mut inv_w = [ModInt998244353::default(); LEVEL];
-        let mut d_inv_w = [ModInt998244353::default(); LEVEL];
-
-        w[LEVEL - 1] = primitive_root.pow((modulo - 1) / (1 << LEVEL));
-        inv_w[LEVEL - 1] = w[LEVEL - 1].inv();
-
-        for i in (0..LEVEL - 1).rev() {
-            w[i] = w[i + 1] * w[i + 1];
-            inv_w[i] = inv_w[i + 1] * inv_w[i + 1];
+        let mut root_of_power_of_2 = [ModInt998244353::default(); LEVEL];
+        for (i, root) in root_of_power_of_2.iter_mut().enumerate() {
+            *root = primitive_root.pow(1 << i);
         }
-
-        d_w[0] = w[1] * w[1];
-        d_inv_w[0] = d_w[0];
-        d_w[1] = w[1];
-        d_inv_w[1] = inv_w[1];
-        d_w[2] = w[2];
-        d_inv_w[2] = w[2];
-
-        for i in 3..LEVEL {
-            d_w[i] = d_w[i - 1] * inv_w[i - 2] * w[i];
-            d_inv_w[i] = d_inv_w[i - 1] * w[i - 2] * inv_w[i];
-        }
-
+        let inv_root_of_power_of_2 = root_of_power_of_2.map(|root| root.inv());
         Self {
-            primitive_root,
-            d_w,
-            d_inv_w,
+            root_of_power_of_2,
+            inv_root_of_power_of_2,
         }
     }
 
     pub fn transform(&self, vec: &mut [ModInt998244353]) {
-        if vec.is_empty() {
+        let vec_len = vec.len();
+        if vec_len <= 1 {
             return;
         }
-        let k = vec.len().trailing_zeros();
-        if k == 1 {
-            let a = vec[1];
-            vec[1] = vec[0] - vec[1];
-            vec[0] += a;
-            return;
-        }
+        assert_eq!(vec_len.count_ones(), 1);
 
-        if k % 2 != 0 {
-            let v = 1 << (k - 1);
-            let (left, right) = vec.split_at_mut(v);
-            for (l, r) in left.iter_mut().zip(right) {
-                let at_l = *l;
-                let at_r = *r;
-                *l = at_l + at_r;
-                *r = at_l - at_r;
-            }
-        }
-
-        let mut v = 1 << (k - 2 - (k % 2));
-        let one = ModInt998244353::new(1);
-        let im = self.d_w[1];
-
-        while v != 0 {
-            let mut xx = one;
-            for (i, chunk) in vec.chunks_exact_mut(4 * v).enumerate() {
-                let ww = xx * xx;
-                let wx = ww * xx;
-                {
-                    let (chunk0, chunk123) = chunk.split_at_mut(v);
-                    let (chunk1, chunk23) = chunk123.split_at_mut(v);
-                    let (chunk2, chunk3) = chunk23.split_at_mut(v);
-                    for (j0, j1, j2, j3) in izip!(chunk0, chunk1, chunk2, chunk3) {
-                        let t0 = *j0;
-                        let t1 = *j1 * xx;
-                        let t2 = *j2 * ww;
-                        let t3 = *j3 * wx;
-                        let t0p2 = t0 + t2;
-                        let t1p3 = t1 + t3;
-                        let t0m2 = t0 - t2;
-                        let t1m3 = (t1 - t3) * im;
-                        *j0 = t0p2 + t1p3;
-                        *j1 = t0p2 - t1p3;
-                        *j2 = t0m2 + t1m3;
-                        *j3 = t0m2 - t1m3;
-                    }
+        let vec_len_width = vec_len.trailing_zeros() as usize - 1;
+        let mut window_width = 1 << (vec_len_width - 1);
+        for &root in self.root_of_power_of_2[..vec_len_width].iter().rev() {
+            for left in (0..vec_len).step_by(2 * vec_len) {
+                let mut root_i = ModInt998244353::new(1);
+                for i in left..left + window_width {
+                    let vec_i = vec[i];
+                    let vec_i_next = vec[i + window_width];
+                    vec[i] = vec_i + vec_i_next;
+                    vec[i + window_width] = vec_i + vec_i_next;
+                    root_i *= root;
                 }
-                xx *= self.d_w[((i + 1) * 4).trailing_zeros() as usize];
             }
-            v >>= 2;
+            window_width /= 2;
         }
     }
 
     pub fn inverse_transform(&self, vec: &mut [ModInt998244353]) {
-        if vec.is_empty() {
+        let vec_len = vec.len();
+        if vec_len <= 1 {
             return;
         }
+        assert_eq!(vec_len.count_ones(), 1);
 
-        let k = vec.len().trailing_zeros();
-        if k == 1 {
-            let a1 = vec[1];
-            vec[1] = vec[0] - vec[1];
-            vec[0] += a1;
-            return;
-        }
-
-        let mut u = 1 << (k - 2);
-        let mut v = 1;
-        let one = ModInt998244353::new(1);
-        let im = self.d_inv_w[1];
-
-        while u != 0 {
-            let mut xx = one;
-            for (i, chunk) in vec.chunks_exact_mut(4 * v).enumerate() {
-                let ww = xx * xx;
-                let yy = xx * im;
-                let (chunk0, chunk123) = chunk.split_at_mut(v);
-                let (chunk1, chunk23) = chunk123.split_at_mut(v);
-                let (chunk2, chunk3) = chunk23.split_at_mut(v);
-                for (j0, j1, j2, j3) in izip!(chunk0, chunk1, chunk2, chunk3) {
-                    let t0 = *j0;
-                    let t1 = *j1;
-                    let t2 = *j2;
-                    let t3 = *j3;
-                    let t0p1 = t0 + t1;
-                    let t2p3 = t2 + t3;
-                    let t0m1 = (t0 - t1) * xx;
-                    let t2m3 = (t2 - t3) * yy;
-                    *j0 = t0p1 + t2p3;
-                    *j1 = t0m1 + t2m3;
-                    *j2 = (t0p1 - t2p3) * ww;
-                    *j3 = (t0m1 - t2m3) * ww;
+        let vec_len_width = (vec_len - 1).trailing_zeros() as usize;
+        let mut window_width = 1;
+        for &inv_root in &self.inv_root_of_power_of_2[1..vec_len_width + 1] {
+            for left in (0..vec_len).step_by(2 * window_width) {
+                let mut inv_root_i = ModInt998244353::new(1);
+                for i in left..left + window_width {
+                    let vec_i = vec[i];
+                    let vec_i_next = vec[i + window_width];
+                    vec[i] = vec_i + vec_i_next * inv_root_i;
+                    vec[i + window_width] = vec_i - vec_i_next * inv_root_i;
+                    inv_root_i *= inv_root;
                 }
-                xx *= self.d_inv_w[((i + 1) * 4).trailing_zeros() as usize];
             }
-            u >>= 2;
-            v <<= 2;
+            window_width *= 2;
         }
-
-        if k % 2 != 0 {
-            let u = 1 << (k - 1);
-            let (left, right) = vec.split_at_mut(u);
-            for (l, r) in left.iter_mut().zip(right) {
-                let at_l = *l;
-                let at_r = *r;
-                *l = at_l + at_r;
-                *r = at_l - at_r;
-            }
+        let inv_vec_len = ModInt998244353::new(vec_len as u32).inv();
+        for elem in &mut vec[..] {
+            *elem *= inv_vec_len;
         }
     }
 }

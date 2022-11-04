@@ -135,12 +135,6 @@ impl AudioVec {
             *elem1 *= *elem2;
         }
         ntt.inverse_transform(&mut buf1.vec);
-
-        // 数論変換で変化した定数倍を戻す
-        let inv = ModInt998244353::new(buf_len as u32).inv();
-        for elem in buf1.vec.iter_mut() {
-            *elem *= inv;
-        }
         buf1.vec
     }
 }
