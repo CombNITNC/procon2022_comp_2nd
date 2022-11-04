@@ -5,20 +5,20 @@ use super::mod_int::ModInt998244353;
 #[cfg(test)]
 mod tests;
 
-/// 変換可能な成分の最高次数.
-const LEVEL: usize = (ModInt998244353::N - 1).trailing_zeros() as usize;
-
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Ntt {
-    root_of_power_of_2: [ModInt998244353; LEVEL],
-    inv_root_of_power_of_2: [ModInt998244353; LEVEL],
+    root_of_power_of_2: [ModInt998244353; Self::LEVEL],
+    inv_root_of_power_of_2: [ModInt998244353; Self::LEVEL],
 }
 
 impl Ntt {
+    /// 変換可能な成分の最高次数.
+    pub const LEVEL: usize = (ModInt998244353::N - 1).trailing_zeros() as usize;
+
     pub fn new() -> Self {
         let modulo = ModInt998244353::N;
         let primitive_root = primitive_root(modulo);
-        let mut root_of_power_of_2 = [ModInt998244353::default(); LEVEL];
+        let mut root_of_power_of_2 = [ModInt998244353::default(); Self::LEVEL];
         for (i, root) in root_of_power_of_2.iter_mut().enumerate() {
             *root = primitive_root.pow(1 << i);
         }
