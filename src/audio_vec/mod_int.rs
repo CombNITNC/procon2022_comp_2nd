@@ -29,6 +29,7 @@ const fn find_r2(modulo: u32) -> u32 {
     (r * r % modulo) as u32
 }
 
+pub type ModInt924844033 = ModInt<924844033>;
 pub type ModInt998244353 = ModInt<998244353>;
 #[test]
 fn const_test_998244353() {

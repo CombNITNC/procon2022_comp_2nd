@@ -1,35 +1,38 @@
 use num::traits::Pow;
 
-use super::mod_int::ModInt998244353;
+use super::mod_int::ModInt;
 
 #[cfg(test)]
 mod tests;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Ntt {
-    root_of_power_of_2: [ModInt998244353; Self::LEVEL],
-    inv_root_of_power_of_2: [ModInt998244353; Self::LEVEL],
+pub struct Ntt<const MOD: u32> {
+    root_of_power_of_2: Vec<ModInt<MOD>>,
+    inv_root_of_power_of_2: Vec<ModInt<MOD>>,
 }
 
-impl Ntt {
+impl<const MOD: u32> Ntt<MOD> {
     /// 変換可能な成分の最高次数.
-    pub const LEVEL: usize = (ModInt998244353::N - 1).trailing_zeros() as usize;
+    pub const LEVEL: usize = (MOD - 1).trailing_zeros() as usize;
 
     pub fn new() -> Self {
-        let modulo = ModInt998244353::N;
+        let modulo = MOD;
         let primitive_root = primitive_root(modulo);
-        let mut root_of_power_of_2 = [ModInt998244353::default(); Self::LEVEL];
-        for (i, root) in root_of_power_of_2.iter_mut().enumerate() {
-            *root = primitive_root.pow(1 << i);
-        }
-        let inv_root_of_power_of_2 = root_of_power_of_2.map(|root| root.inv());
+        let root_of_power_of_2: Vec<_> = (0..Self::LEVEL)
+            .map(|i| primitive_root.pow(1 << i))
+            .collect();
+        let inv_root_of_power_of_2 = root_of_power_of_2
+            .iter()
+            .copied()
+            .map(|root| root.inv())
+            .collect();
         Self {
             root_of_power_of_2,
             inv_root_of_power_of_2,
         }
     }
 
-    pub fn transform(&self, vec: &mut [ModInt998244353]) {
+    pub fn transform(&self, vec: &mut [ModInt<MOD>]) {
         let vec_len = vec.len();
         if vec_len <= 1 {
             return;
@@ -40,7 +43,7 @@ impl Ntt {
         let mut window_width = 1 << (vec_len_width - 1);
         for &root in self.root_of_power_of_2[..vec_len_width].iter().rev() {
             for left in (0..vec_len).step_by(2 * vec_len) {
-                let mut root_i = ModInt998244353::new(1);
+                let mut root_i = ModInt::new(1);
                 for i in left..left + window_width {
                     let vec_i = vec[i];
                     let vec_i_next = vec[i + window_width];
@@ -53,7 +56,7 @@ impl Ntt {
         }
     }
 
-    pub fn inverse_transform(&self, vec: &mut [ModInt998244353]) {
+    pub fn inverse_transform(&self, vec: &mut [ModInt<MOD>]) {
         let vec_len = vec.len();
         if vec_len <= 1 {
             return;
@@ -64,7 +67,7 @@ impl Ntt {
         let mut window_width = 1;
         for &inv_root in &self.inv_root_of_power_of_2[1..vec_len_width + 1] {
             for left in (0..vec_len).step_by(2 * window_width) {
-                let mut inv_root_i = ModInt998244353::new(1);
+                let mut inv_root_i = ModInt::new(1);
                 for i in left..left + window_width {
                     let vec_i = vec[i];
                     let vec_i_next = vec[i + window_width];
@@ -75,22 +78,22 @@ impl Ntt {
             }
             window_width *= 2;
         }
-        let inv_vec_len = ModInt998244353::new(vec_len as u32).inv();
+        let inv_vec_len = ModInt::new(vec_len as u32).inv();
         for elem in &mut vec[..] {
             *elem *= inv_vec_len;
         }
     }
 }
 
-impl Default for Ntt {
+impl<const MOD: u32> Default for Ntt<MOD> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-fn primitive_root(modulo: u32) -> ModInt998244353 {
+fn primitive_root<const MOD: u32>(modulo: u32) -> ModInt<MOD> {
     if modulo == 2 {
-        return ModInt998244353::new(1);
+        return ModInt::new(1);
     }
 
     let mut divisors = vec![];
@@ -128,7 +131,7 @@ fn primitive_root(modulo: u32) -> ModInt998244353 {
                 continue 'find;
             }
         }
-        return ModInt998244353::new(primitive_root as u32);
+        return ModInt::new(primitive_root as u32);
     }
     unreachable!()
 }

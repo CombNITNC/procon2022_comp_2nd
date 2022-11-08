@@ -1,12 +1,8 @@
 use std::{collections::HashMap, fs::File, io, path::PathBuf};
 
 use log::info;
-use num::Zero;
 
-use crate::{
-    audio_vec::{mod_int::ModInt998244353, AudioVec},
-    solve::card_voice::CardVoiceIndex,
-};
+use crate::{audio_vec::AudioVec, solve::card_voice::CardVoiceIndex};
 
 pub fn load_all_jk() -> io::Result<HashMap<CardVoiceIndex, AudioVec>> {
     let mut map = HashMap::new();
@@ -27,7 +23,7 @@ pub fn load_all_jk() -> io::Result<HashMap<CardVoiceIndex, AudioVec>> {
 /// 読み札の音声ごとに, その音声を 2 乗したものの累積和を前計算して格納する.
 #[derive(Debug)]
 pub struct Precalculation {
-    table: HashMap<CardVoiceIndex, Vec<ModInt998244353>>,
+    table: HashMap<CardVoiceIndex, Vec<u64>>,
 }
 
 impl Precalculation {
@@ -36,7 +32,7 @@ impl Precalculation {
         for (&using, voice) in card_voices.iter() {
             let squared = voice.squared();
             let partial_sum: Vec<_> = squared
-                .scan(ModInt998244353::new(0), |acc, x| {
+                .scan(0, |acc, x| {
                     *acc += x;
                     Some(*acc)
                 })
@@ -47,10 +43,10 @@ impl Precalculation {
         Self { table }
     }
 
-    pub fn get(&self, using: CardVoiceIndex, delay: isize) -> ModInt998244353 {
+    pub fn get(&self, using: CardVoiceIndex, delay: isize) -> u64 {
         (0 <= delay)
             .then(|| self.table[&using].get(delay as usize).copied())
             .flatten()
-            .unwrap_or_else(ModInt998244353::zero)
+            .unwrap_or(0)
     }
 }

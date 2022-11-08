@@ -1,10 +1,9 @@
 use std::collections::HashMap;
 
 use log::info;
-use num::Zero;
 
 use crate::{
-    audio_vec::{mod_int::ModInt998244353, ntt::Ntt, AudioVec},
+    audio_vec::{ntt::Ntt, AudioVec},
     precalc::Precalculation,
 };
 
@@ -16,7 +15,7 @@ pub mod card_voice;
 pub struct InspectPoint {
     pub using_voice: CardVoiceIndex,
     pub delay: isize,
-    pub score: u32,
+    pub score: u64,
 }
 
 /// 損失関数のオブジェクト
@@ -27,7 +26,7 @@ pub struct Loss {
     flipped_card_voices: HashMap<CardVoiceIndex, AudioVec>,
     precalc: Precalculation,
     /// 数論変換のための前計算オブジェクト
-    ntt: Ntt,
+    ntt: (Ntt<924844033>, Ntt<998244353>),
 }
 
 impl Loss {
@@ -45,7 +44,7 @@ impl Loss {
             card_voices,
             flipped_card_voices,
             precalc,
-            ntt: Ntt::new(),
+            ntt: (Ntt::new(), Ntt::new()),
         }
     }
 
@@ -54,24 +53,25 @@ impl Loss {
     /// `problem_voice` は `card_voices` のうちからいくつかが選ばれて, 時間をずらして重ね合わせたもの
     #[inline]
     pub fn evaluate(&self, problem_voice: &AudioVec, using_voice: CardVoiceIndex) -> InspectPoint {
-        let convolution =
-            problem_voice.convolution(&self.flipped_card_voices[&using_voice], &self.ntt);
-        let stride = (self.card_voices[&using_voice].vec.len() - problem_voice.vec.len()) as isize;
+        let convolution = problem_voice.convolution(
+            &self.flipped_card_voices[&using_voice],
+            (&self.ntt.0, &self.ntt.1),
+        );
+        let stride = (self.card_voices[&using_voice].len() - problem_voice.len()) as isize;
         let squared_norm = problem_voice.squared_norm();
 
-        let mut min_score = u32::MAX;
+        let mut min_score = u64::MAX;
         let mut min_delay = 0;
-        for delay in -(problem_voice.vec.len() as isize)..stride {
+        for delay in -(problem_voice.len() as isize)..stride {
             let convolution_at = (0 <= delay)
                 .then(|| convolution.get(delay as usize).copied())
                 .flatten()
-                .unwrap_or_else(ModInt998244353::zero);
-            let score = (squared_norm - ModInt998244353::new(2) * convolution_at
+                .unwrap_or(0);
+            let score = squared_norm - 2 * convolution_at
                 + self
                     .precalc
-                    .get(using_voice, (problem_voice.vec.len() as isize) - delay)
-                - self.precalc.get(using_voice, -delay))
-            .as_u32();
+                    .get(using_voice, (problem_voice.len() as isize) - delay)
+                - self.precalc.get(using_voice, -delay);
             if score < min_score {
                 min_score = score;
                 min_delay = delay;
@@ -120,18 +120,20 @@ impl Loss {
 
     fn validate(&self, problem_voice: &AudioVec, answer: &[InspectPoint]) -> bool {
         let mut composed = AudioVec::default();
-        composed.resize(problem_voice.vec.len());
+        composed.resize(problem_voice.len());
         for &InspectPoint {
             using_voice, delay, ..
         } in answer
         {
-            composed.add_assign(&self.card_voices[&using_voice].delayed(delay));
+            let mut cloned = self.card_voices[&using_voice].clone();
+            cloned.delayed(delay);
+            composed.add_assign(&cloned);
         }
         composed.clip();
 
         let composed_norm = problem_voice.sub(&composed).squared_norm();
         info!("validation : score of {answer:?} is\n\t{composed_norm:?}");
-        let threshold = ModInt998244353::new(10);
+        let threshold = 10;
         composed_norm < threshold
     }
 }

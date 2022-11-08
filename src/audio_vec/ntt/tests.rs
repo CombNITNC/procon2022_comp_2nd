@@ -1,39 +1,35 @@
 //! From: https://judge.yosupo.jp/problem/convolution_mod
 
-use crate::audio_vec::{mod_int::ModInt998244353, AudioVec};
+use crate::audio_vec::AudioVec;
 
 use super::Ntt;
 
 #[test]
 fn convolution1() {
-    let a: Vec<_> = [1, 2, 3, 4].into_iter().map(ModInt998244353::new).collect();
-    let b: Vec<_> = [5, 6, 7, 8, 9]
-        .into_iter()
-        .map(ModInt998244353::new)
-        .collect();
+    let a = [1, 2, 3, 4];
+    let b = [5, 6, 7, 8, 9];
 
-    let a_audio = AudioVec { vec: a };
-    let b_audio = AudioVec { vec: b };
-    let ntt = Ntt::new();
-    let out = a_audio.convolution(&b_audio, &ntt);
+    let a_audio = AudioVec::from_raw_slice(&a);
+    let b_audio = AudioVec::from_raw_slice(&b);
+    let ntt1 = Ntt::new();
+    let ntt2 = Ntt::new();
+    let out = a_audio.convolution(&b_audio, (&ntt1, &ntt2));
 
-    let expected: Vec<_> = [5, 16, 34, 60, 70, 70, 59, 36]
-        .into_iter()
-        .map(ModInt998244353::new)
-        .collect();
+    let expected = vec![5, 16, 34, 60, 70, 70, 59, 36];
     assert_eq!(out, expected);
 }
 
 #[test]
 fn convolution2() {
-    let a: Vec<_> = [10000000].into_iter().map(ModInt998244353::new).collect();
-    let b: Vec<_> = [10000000].into_iter().map(ModInt998244353::new).collect();
+    let a = [10000000];
+    let b = [10000000];
 
-    let a_audio = AudioVec { vec: a };
-    let b_audio = AudioVec { vec: b };
-    let ntt = Ntt::new();
-    let out = a_audio.convolution(&b_audio, &ntt);
+    let a_audio = AudioVec::from_raw_slice(&a);
+    let b_audio = AudioVec::from_raw_slice(&b);
+    let ntt1 = Ntt::new();
+    let ntt2 = Ntt::new();
+    let out = a_audio.convolution(&b_audio, (&ntt1, &ntt2));
 
-    let expected: Vec<_> = [871938225].into_iter().map(ModInt998244353::new).collect();
+    let expected = vec![100000000000000];
     assert_eq!(out, expected);
 }
