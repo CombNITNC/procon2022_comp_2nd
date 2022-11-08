@@ -54,8 +54,16 @@ impl AudioVec {
     #[inline]
     pub fn add_assign(&mut self, other: &Self) {
         for i in 0..self.vec1.len() {
-            self.vec1[i] += other.vec1[(i as isize - self.delay + other.delay) as usize];
-            self.vec2[i] += other.vec2[(i as isize - self.delay + other.delay) as usize];
+            self.vec1[i] += other
+                .vec1
+                .get((i as isize - self.delay + other.delay) as usize)
+                .copied()
+                .unwrap_or_default();
+            self.vec2[i] += other
+                .vec2
+                .get((i as isize - self.delay + other.delay) as usize)
+                .copied()
+                .unwrap_or_default();
         }
     }
 
