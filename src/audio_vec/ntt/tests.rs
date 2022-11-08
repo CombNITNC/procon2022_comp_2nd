@@ -1,6 +1,6 @@
 //! From: https://judge.yosupo.jp/problem/convolution_mod
 
-use crate::audio_vec::AudioVec;
+use crate::audio_vec::{garner, AudioVec};
 
 use super::Ntt;
 
@@ -32,4 +32,35 @@ fn convolution2() {
 
     let expected = vec![100000000000000];
     assert_eq!(out, expected);
+}
+
+#[test]
+fn convolution3() {
+    let a = [
+        2452245, 25262467, 245594, 13401, 1341, 1349, 31459, 568249, 13843013, 46585340, 3434, 0,
+        0, 0, 24573, 15134, 78943510, 9847, 58183745, 1846, 17043, 710,
+    ];
+    let b = [
+        789708, 780967, 67670, 5656, 12134, 5, 656321, 0, 54580, 13, 2433435, 3823, 35548034,
+        23894, 89708, 878659, 867970, 978, 60, 8, 8706850, 348, 69407, 68,
+    ];
+
+    let a_audio = AudioVec::from_raw_slice(&a);
+    let b_audio = AudioVec::from_raw_slice(&b);
+    let ntt1 = Ntt::new();
+    let ntt2 = Ntt::new();
+    let out = a_audio.convolution(&b_audio, (&ntt1, &ntt2));
+
+    assert_eq!(out, ugly_convolution(&a_audio, &b_audio));
+}
+
+fn ugly_convolution(a: &AudioVec, b: &AudioVec) -> Vec<u64> {
+    let len = a.vec1.len() + b.vec1.len() - 1;
+    let mut res = vec![0; len];
+    for (i, (&left1, &left2)) in a.vec1.iter().zip(a.vec2.iter()).enumerate() {
+        for (j, (&right1, &right2)) in b.vec1.iter().zip(b.vec2.iter()).enumerate() {
+            res[i + j] += garner(left1 * right1, left2 * right2);
+        }
+    }
+    res
 }
