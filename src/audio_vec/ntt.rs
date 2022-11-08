@@ -42,7 +42,7 @@ impl<const MOD: u32> Ntt<MOD> {
         let vec_len_width = vec_len.trailing_zeros() as usize - 1;
         let mut window_width = 1 << (vec_len_width - 1);
         for &root in self.root_of_power_of_2[..vec_len_width].iter().rev() {
-            for left in (0..vec_len).step_by(2 * vec_len) {
+            for left in (0..vec_len).step_by(2 * window_width) {
                 let mut root_i = ModInt::new(1);
                 for i in left..left + window_width {
                     let vec_i = vec[i];
