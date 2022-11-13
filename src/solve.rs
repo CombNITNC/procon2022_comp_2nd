@@ -63,6 +63,16 @@ impl Loss {
         let mut min_score = u64::MAX;
         let mut min_delay = 0;
         for delay in -(problem_voice.len() as isize)..stride {
+            // R : using voice
+            // T : problem voice length - 1
+            // x : problem voice
+            // w : how long delayed
+            // f(w) = |x - R.delayed(w).clip()|^2
+            // = |x|^2 - 2 * x * R.delayed(w).clip() + |R.delayed(w)|^2
+            // = |x|^2 - 2 * x * R.delayed(w) + |R.delayed(w)|^2
+            // = |x|^2 - 2 * Σ_t (x_t * R_{t - w}) + Σ_{t = 0}^{T} R_{t - w}^2
+            // = |x|^2 - 2 * Σ_t (x_t * R_{w - t}.flip()) + Σ_{t = -w}^{T - w} R_t^2
+            // = |x|^2 - 2 * x.convolution(R.flip())_w + Σ_{t = -∞}^{T - w} R_t^2 - Σ_{t = -∞}^{-w} R_t^2
             let convolution_at = (0 <= delay)
                 .then(|| convolution.get(delay as usize).copied())
                 .flatten()
