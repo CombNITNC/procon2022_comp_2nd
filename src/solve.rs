@@ -131,7 +131,7 @@ impl Loss {
         }
         composed.clip();
 
-        let composed_norm = problem_voice.sub(&composed).squared_norm();
+        let composed_norm = problem_voice.sub(&composed).squared_norm() / composed.len() as u64;
         info!("validation : score of {answer:?} is\n\t{composed_norm:?}");
         let threshold = 10;
         composed_norm < threshold
