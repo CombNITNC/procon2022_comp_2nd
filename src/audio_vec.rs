@@ -118,10 +118,16 @@ impl AudioVec {
     #[inline]
     pub fn clip(&mut self) {
         for elem in self.vec1.iter_mut() {
-            *elem = (*elem).min(ModInt::new(u16::MAX as u32));
+            *elem = (*elem).clamp(
+                ModInt::from_signed(i16::MIN as i64),
+                ModInt::from_signed(i16::MAX as i64),
+            );
         }
         for elem in self.vec2.iter_mut() {
-            *elem = (*elem).min(ModInt::new(u16::MAX as u32));
+            *elem = (*elem).clamp(
+                ModInt::from_signed(i16::MIN as i64),
+                ModInt::from_signed(i16::MAX as i64),
+            );
         }
     }
 
@@ -195,27 +201,13 @@ impl AudioVec {
     pub fn from_pcm(pcm: &[i16]) -> Self {
         let vec1 = pcm
             .iter()
-            .map(|&x| {
-                if 0 <= x {
-                    x as i64
-                } else {
-                    (x as i64) + ModInt924844033::N as i64
-                }
-            })
-            .map(|x| x.try_into().unwrap_or_else(|_| panic!("{x}")))
-            .map(ModInt924844033::new)
+            .map(|&x| x as i64)
+            .map(ModInt924844033::from_signed)
             .collect();
         let vec2 = pcm
             .iter()
-            .map(|&x| {
-                if 0 <= x {
-                    x as i64
-                } else {
-                    (x as i64) + ModInt998244353::N as i64
-                }
-            })
-            .map(|x| x.try_into().unwrap_or_else(|_| panic!("{x}")))
-            .map(ModInt998244353::new)
+            .map(|&x| x as i64)
+            .map(ModInt998244353::from_signed)
             .collect();
 
         Self {

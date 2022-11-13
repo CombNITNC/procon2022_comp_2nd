@@ -39,11 +39,23 @@ fn const_test_998244353() {
 }
 
 /// MOD を法として 2^32 を掛けたモンゴメリ表現. MOD は素数であることが期待される.
-#[derive(
-    Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize,
-)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[repr(transparent)]
 pub struct ModInt<const MOD: u32>(u32);
+
+impl<const MOD: u32> PartialOrd for ModInt<MOD> {
+    #[inline]
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl<const MOD: u32> Ord for ModInt<MOD> {
+    #[inline]
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.as_u32().cmp(&other.as_u32())
+    }
+}
 
 impl<const MOD: u32> From<ModInt<MOD>> for u32 {
     #[inline]
@@ -55,6 +67,14 @@ impl<const MOD: u32> From<ModInt<MOD>> for u32 {
 impl<const MOD: u32> ModInt<MOD> {
     #[inline]
     pub fn new(n: u32) -> Self {
+        Self(Self::reduce(n as u64 * Self::R2 as u64))
+    }
+
+    #[inline]
+    pub fn from_signed(mut n: i64) -> Self {
+        while n < 0 {
+            n += MOD as i64;
+        }
         Self(Self::reduce(n as u64 * Self::R2 as u64))
     }
 
