@@ -72,7 +72,7 @@ impl Loss {
             // = |x|^2 - 2 * x * R.delayed(w) + |R.delayed(w)|^2
             // = |x|^2 - 2 * Σ_t (x_t * R_{t - w}) + Σ_{t = 0}^{T - 1} R_{t - w}^2
             // = |x|^2 - 2 * Σ_t (x_t * R_{w - t}.flip()) + Σ_{t = -w}^{T - w - 1} R_t^2
-            // = |x|^2 - 2 * x.convolution(R.flip())_w + Σ_{t = -∞}^{T - w - 1} R_t^2 - Σ_{t = -∞}^{-w - 1} R_t^2
+            // = |x|^2 - 2 * x.convolution(R.flip())_w + Σ_{t = 0}^{T - w - 1} R_t^2 - Σ_{t = 0}^{-w - 1} R_t^2
             let convolution_at = (0 <= delay)
                 .then(|| convolution.get(delay as usize).copied())
                 .flatten()
@@ -80,8 +80,8 @@ impl Loss {
             let score = squared_norm - 2 * convolution_at
                 + self
                     .precalc
-                    .get(using_voice, (problem_voice.len() as isize) - delay)
-                - self.precalc.get(using_voice, -delay);
+                    .get(using_voice, (problem_voice.len() as isize) - delay - 1)
+                - self.precalc.get(using_voice, -delay - 1);
             if score < min_score {
                 min_score = score;
                 min_delay = delay;

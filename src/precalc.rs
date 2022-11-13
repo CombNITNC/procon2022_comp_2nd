@@ -22,7 +22,7 @@ pub fn load_all_jk() -> io::Result<HashMap<CardVoiceIndex, AudioVec>> {
 
 /// 読み札の音声ごとに, その音声を 2 乗したものの累積和を前計算して格納する.
 ///
-/// すなわち, `f(x) = Σ_{t = -∞}^{x - 1} R_t^2` を提供する.
+/// すなわち, `f(x) = Σ_{t = 0}^{x} R_t^2` を提供する.
 #[derive(Debug)]
 pub struct Precalculation {
     table: HashMap<CardVoiceIndex, Vec<u64>>,
