@@ -2,9 +2,9 @@ use std::{collections::HashMap, fs::File, io, path::PathBuf};
 
 use log::info;
 
-use crate::{audio_vec::AudioVec, solve::card_voice::CardVoiceIndex};
+use crate::{audio_vec::owned::Owned, solve::card_voice::CardVoiceIndex};
 
-pub fn load_all_jk() -> io::Result<HashMap<CardVoiceIndex, AudioVec>> {
+pub fn load_all_jk() -> io::Result<HashMap<CardVoiceIndex, Owned>> {
     let mut map = HashMap::new();
     for idx in CardVoiceIndex::all() {
         let path: PathBuf = ["assets".into(), "jk".into(), format!("{}.wav", idx)]
@@ -14,7 +14,7 @@ pub fn load_all_jk() -> io::Result<HashMap<CardVoiceIndex, AudioVec>> {
         let pcm = data
             .try_into_sixteen()
             .expect("input audio bit-depth must be 16-bit");
-        map.insert(idx, AudioVec::from_pcm(&pcm));
+        map.insert(idx, Owned::from_pcm(&pcm));
         info!("loaded speech voice: {}", path.display());
     }
     Ok(map)
@@ -29,7 +29,7 @@ pub struct Precalculation {
 }
 
 impl Precalculation {
-    pub fn new(card_voices: &HashMap<CardVoiceIndex, AudioVec>) -> Precalculation {
+    pub fn new(card_voices: &HashMap<CardVoiceIndex, Owned>) -> Precalculation {
         let mut table = HashMap::new();
         for (&using, voice) in card_voices.iter() {
             let squared = voice.squared();

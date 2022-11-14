@@ -3,7 +3,10 @@ use std::collections::HashMap;
 use log::info;
 
 use crate::{
-    audio_vec::{ntt::Ntt, AudioVec},
+    audio_vec::{
+        owned::{ntt::Ntt, Owned},
+        AudioVec,
+    },
     precalc::Precalculation,
 };
 
@@ -22,23 +25,19 @@ pub struct InspectPoint {
 #[derive(Debug)]
 pub struct Loss {
     /// 88 個の読み札の読み上げ音声
-    card_voices: HashMap<CardVoiceIndex, AudioVec>,
-    flipped_card_voices: HashMap<CardVoiceIndex, AudioVec>,
+    card_voices: HashMap<CardVoiceIndex, Owned>,
+    flipped_card_voices: HashMap<CardVoiceIndex, Owned>,
     precalc: Precalculation,
     /// 数論変換のための前計算オブジェクト
     ntt: (Ntt<924844033>, Ntt<998244353>),
 }
 
 impl Loss {
-    pub fn new(card_voices: HashMap<CardVoiceIndex, AudioVec>) -> Self {
+    pub fn new(card_voices: HashMap<CardVoiceIndex, Owned>) -> Self {
         let precalc = Precalculation::new(&card_voices);
         let flipped_card_voices = card_voices
             .iter()
-            .map(|(&idx, vec)| {
-                let mut cloned = vec.clone();
-                cloned.flip();
-                (idx, cloned)
-            })
+            .map(|(&idx, vec)| (idx, vec.clone().flip().to_owned(vec.len())))
             .collect();
         Self {
             card_voices,
@@ -52,7 +51,7 @@ impl Loss {
     ///
     /// `problem_voice` は `card_voices` のうちからいくつかが選ばれて, 時間をずらして重ね合わせたもの
     #[inline]
-    pub fn evaluate(&self, problem_voice: &AudioVec, using_voice: CardVoiceIndex) -> InspectPoint {
+    pub fn evaluate(&self, problem_voice: &Owned, using_voice: CardVoiceIndex) -> InspectPoint {
         let convolution = problem_voice.convolution(
             &self.flipped_card_voices[&using_voice],
             (&self.ntt.0, &self.ntt.1),
@@ -95,7 +94,7 @@ impl Loss {
         }
     }
 
-    pub fn find_points(&self, solutions: usize, problem_voice: &AudioVec) -> Vec<InspectPoint> {
+    pub fn find_points(&self, solutions: usize, problem_voice: &Owned) -> Vec<InspectPoint> {
         let mut points_by_loss: Vec<_> = CardVoiceIndex::all()
             .map(|index| self.evaluate(problem_voice, index))
             .collect();
@@ -128,20 +127,24 @@ impl Loss {
         todo!()
     }
 
-    fn validate(&self, problem_voice: &AudioVec, answer: &[InspectPoint]) -> bool {
-        let mut composed = AudioVec::default();
-        composed.resize(problem_voice.len());
+    fn validate(&self, problem_voice: &Owned, answer: &[InspectPoint]) -> bool {
+        let len = problem_voice.len();
+        let mut composed = Owned::new();
         for &InspectPoint {
             using_voice, delay, ..
         } in answer
         {
-            let mut cloned = self.card_voices[&using_voice].clone();
-            cloned.delayed(delay);
-            composed.add_assign(&cloned);
+            composed = composed
+                .add(self.card_voices[&using_voice].clone().delay(delay))
+                .to_owned(len);
         }
-        composed.clip();
 
-        let composed_norm = problem_voice.sub(&composed).squared_norm() / composed.len() as u64;
+        let composed_norm = problem_voice
+            .clone()
+            .sub(composed.clip())
+            .to_owned(len)
+            .squared_norm()
+            / len as u64;
         info!("validation : score of {answer:?} is\n\t{composed_norm:?}");
         let threshold = 10;
         composed_norm < threshold

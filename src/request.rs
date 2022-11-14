@@ -3,7 +3,7 @@ use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::audio_vec::AudioVec;
+use crate::audio_vec::owned::Owned;
 
 pub mod mock;
 pub mod net;
@@ -66,7 +66,7 @@ pub trait Requester {
 
     fn get_problem(&self) -> Result<Problem>;
 
-    fn get_chunks(&self, using_chunks: u8) -> Result<Vec<AudioVec>>;
+    fn get_chunks(&self, using_chunks: u8) -> Result<Vec<Owned>>;
 
     fn post_answer(&self, answer: &Answer) -> Result<AnswerResponse>;
 }

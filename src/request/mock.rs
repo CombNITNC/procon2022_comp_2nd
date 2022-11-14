@@ -2,7 +2,7 @@ use std::{fs::File, path::PathBuf};
 
 use serde::Deserialize;
 
-use crate::audio_vec::AudioVec;
+use crate::audio_vec::owned::Owned;
 
 use super::Requester;
 
@@ -70,12 +70,12 @@ impl Requester for MockRequester {
         })
     }
 
-    fn get_chunks(&self, _using_chunks: u8) -> anyhow::Result<Vec<AudioVec>> {
+    fn get_chunks(&self, _using_chunks: u8) -> anyhow::Result<Vec<Owned>> {
         let data = wav::read(&mut File::open(self.using_path.join("problem1.wav"))?)?.1;
         let pcm = data
             .try_into_sixteen()
             .expect("input audio bit-depth must be 16-bit");
-        Ok(vec![AudioVec::from_pcm(&pcm)])
+        Ok(vec![Owned::from_pcm(&pcm)])
     }
 
     fn post_answer(&self, answer: &super::Answer) -> anyhow::Result<super::AnswerResponse> {

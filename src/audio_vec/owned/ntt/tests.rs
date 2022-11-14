@@ -1,6 +1,6 @@
 //! From: https://judge.yosupo.jp/problem/convolution_mod
 
-use crate::audio_vec::{garner, AudioVec};
+use crate::audio_vec::owned::Owned;
 
 use super::Ntt;
 
@@ -9,8 +9,8 @@ fn convolution1() {
     let a = [1, 2, 3, 4];
     let b = [5, 6, 7, 8, 9];
 
-    let a_audio = AudioVec::from_raw_slice(&a);
-    let b_audio = AudioVec::from_raw_slice(&b);
+    let a_audio = Owned::from_raw_slice(&a);
+    let b_audio = Owned::from_raw_slice(&b);
     let ntt1 = Ntt::new();
     let ntt2 = Ntt::new();
     let out = a_audio.convolution(&b_audio, (&ntt1, &ntt2));
@@ -24,8 +24,8 @@ fn convolution2() {
     let a = [10000000];
     let b = [10000000];
 
-    let a_audio = AudioVec::from_raw_slice(&a);
-    let b_audio = AudioVec::from_raw_slice(&b);
+    let a_audio = Owned::from_raw_slice(&a);
+    let b_audio = Owned::from_raw_slice(&b);
     let ntt1 = Ntt::new();
     let ntt2 = Ntt::new();
     let out = a_audio.convolution(&b_audio, (&ntt1, &ntt2));
@@ -45,8 +45,8 @@ fn convolution3() {
         23894, 89708, 878659, 867970, 978, 60, 8, 8706850, 348, 69407, 68,
     ];
 
-    let a_audio = AudioVec::from_raw_slice(&a);
-    let b_audio = AudioVec::from_raw_slice(&b);
+    let a_audio = Owned::from_raw_slice(&a);
+    let b_audio = Owned::from_raw_slice(&b);
     let ntt1 = Ntt::new();
     let ntt2 = Ntt::new();
     let out = a_audio.convolution(&b_audio, (&ntt1, &ntt2));
@@ -54,12 +54,12 @@ fn convolution3() {
     assert_eq!(out, ugly_convolution(&a_audio, &b_audio));
 }
 
-fn ugly_convolution(a: &AudioVec, b: &AudioVec) -> Vec<u64> {
-    let len = a.vec1.len() + b.vec1.len() - 1;
+fn ugly_convolution(a: &Owned, b: &Owned) -> Vec<u64> {
+    let len = a.len() + b.len() - 1;
     let mut res = vec![0; len];
-    for (i, (&left1, &left2)) in a.vec1.iter().zip(a.vec2.iter()).enumerate() {
-        for (j, (&right1, &right2)) in b.vec1.iter().zip(b.vec2.iter()).enumerate() {
-            res[i + j] += garner(left1 * right1, left2 * right2);
+    for (i, &left) in a.vec.iter().enumerate() {
+        for (j, &right) in b.vec.iter().enumerate() {
+            res[i + j] += left.convolution(right);
         }
     }
     res

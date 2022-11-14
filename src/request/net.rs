@@ -6,7 +6,7 @@ use reqwest::{
     Url,
 };
 
-use crate::audio_vec::AudioVec;
+use crate::audio_vec::owned::Owned;
 
 use super::{Error, Requester};
 
@@ -69,7 +69,7 @@ impl Requester for NetRequester {
         Ok(json)
     }
 
-    fn get_chunks(&self, using_chunks: u8) -> anyhow::Result<Vec<AudioVec>> {
+    fn get_chunks(&self, using_chunks: u8) -> anyhow::Result<Vec<Owned>> {
         let chunks_url = self.endpoint.join("/problem/chunks").unwrap();
         let res = self
             .client
@@ -107,7 +107,7 @@ impl Requester for NetRequester {
                     .1
                     .try_into_sixteen()
                     .expect("expected 16-bit depth wav file");
-                Ok(AudioVec::from_pcm(&pcm))
+                Ok(Owned::from_pcm(&pcm))
             })
             .collect()
     }
