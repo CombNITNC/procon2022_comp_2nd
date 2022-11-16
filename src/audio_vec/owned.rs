@@ -15,8 +15,12 @@ pub struct Owned {
 }
 
 impl AudioVec for Owned {
-    fn get(&self, index: isize) -> Option<Pixel> {
-        self.vec.get(usize(index).ok()?).copied()
+    fn get(&self, index: isize) -> Pixel {
+        usize(index)
+            .ok()
+            .and_then(|index| self.vec.get(index))
+            .copied()
+            .unwrap_or_default()
     }
 }
 

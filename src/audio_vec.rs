@@ -6,7 +6,7 @@ pub mod composite;
 pub mod owned;
 
 pub trait AudioVec {
-    fn get(&self, index: isize) -> Option<Pixel>;
+    fn get(&self, index: isize) -> Pixel;
 
     fn add<B>(self, other: B) -> composite::Add<Self, B>
     where
@@ -52,6 +52,6 @@ pub trait AudioVec {
     }
 
     fn to_owned(&self, len: usize) -> Owned {
-        Owned::from_pixels((0..len).flat_map(|index| self.get(isize(index).unwrap())))
+        Owned::from_pixels((0..len).map(|index| self.get(isize(index).unwrap())))
     }
 }

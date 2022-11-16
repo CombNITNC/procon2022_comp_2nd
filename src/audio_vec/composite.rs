@@ -1,3 +1,5 @@
+use cast::i64;
+
 use super::{owned::pixel::Pixel, AudioVec};
 
 #[derive(Debug)]
@@ -7,11 +9,8 @@ pub struct Add<A, B> {
 }
 
 impl<A: AudioVec, B: AudioVec> AudioVec for Add<A, B> {
-    fn get(&self, index: isize) -> Option<Pixel> {
-        self.left
-            .get(index)
-            .zip(self.right.get(index))
-            .map(|(l, r)| l + r)
+    fn get(&self, index: isize) -> Pixel {
+        self.left.get(index) + self.right.get(index)
     }
 }
 
@@ -22,11 +21,8 @@ pub struct Sub<A, B> {
 }
 
 impl<A: AudioVec, B: AudioVec> AudioVec for Sub<A, B> {
-    fn get(&self, index: isize) -> Option<Pixel> {
-        self.left
-            .get(index)
-            .zip(self.right.get(index))
-            .map(|(l, r)| l - r)
+    fn get(&self, index: isize) -> Pixel {
+        self.left.get(index) - self.right.get(index)
     }
 }
 
@@ -38,7 +34,7 @@ pub struct Delayed<T> {
 }
 
 impl<T: AudioVec> AudioVec for Delayed<T> {
-    fn get(&self, index: isize) -> Option<Pixel> {
+    fn get(&self, index: isize) -> Pixel {
         self.vec.get(index + self.delay)
     }
 }
@@ -49,7 +45,7 @@ pub struct Flipped<T> {
 }
 
 impl<T: AudioVec> AudioVec for Flipped<T> {
-    fn get(&self, index: isize) -> Option<Pixel> {
+    fn get(&self, index: isize) -> Pixel {
         self.vec.get(-index)
     }
 }
@@ -60,9 +56,10 @@ pub struct Clipped<T> {
 }
 
 impl<T: AudioVec> AudioVec for Clipped<T> {
-    fn get(&self, index: isize) -> Option<Pixel> {
-        self.vec
-            .get(index)
-            .filter(|level| level.as_u64() <= u16::MAX as u64)
+    fn get(&self, index: isize) -> Pixel {
+        self.vec.get(index).clamp(
+            Pixel::from_signed(i64(i16::MIN)),
+            Pixel::from_signed(i64(i16::MAX)),
+        )
     }
 }

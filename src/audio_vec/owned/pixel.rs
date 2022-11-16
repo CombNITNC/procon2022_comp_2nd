@@ -9,6 +9,18 @@ use super::mod_int::{ModInt, ModInt924844033, ModInt998244353};
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Pixel(ModInt924844033, ModInt998244353);
 
+impl PartialOrd for Pixel {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Pixel {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.as_u64().cmp(&other.as_u64())
+    }
+}
+
 fn garner(m1: ModInt924844033, m2: ModInt998244353) -> u64 {
     let r1 = m1.as_u32();
     let m1 = ModInt924844033::N;
