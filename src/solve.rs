@@ -94,40 +94,15 @@ impl Loss {
         }
     }
 
-    pub fn find_points(&self, solutions: usize, problem_voice: &Owned) -> Vec<InspectPoint> {
+    pub fn find_points(&self, problem_voice: &Owned) -> Vec<InspectPoint> {
         let mut points_by_loss: Vec<_> = CardVoiceIndex::all()
             .map(|index| self.evaluate(problem_voice, index))
             .collect();
         points_by_loss.sort_unstable_by_key(|point| point.score);
-        let points_by_loss = points_by_loss;
-
-        let first_answer = &points_by_loss[..solutions];
-
-        info!("first answer is: {:?}", first_answer);
-
-        // この最初に見つけた解が問題に一致するかどうか検算
-        if self.validate(problem_voice, first_answer) {
-            return first_answer.to_vec();
-        }
-
-        // 違うようなので, 最初の解から 1 つだけ取り除いて別の解を探す
-        for &next_candidate in &points_by_loss[solutions..] {
-            for to_remove in 0..first_answer.len() {
-                let next_answer = {
-                    let mut list = first_answer.to_vec();
-                    list[to_remove] = next_candidate;
-                    list
-                };
-                if self.validate(problem_voice, &next_answer) {
-                    return next_answer;
-                }
-            }
-        }
-
-        todo!()
+        points_by_loss
     }
 
-    fn validate(&self, problem_voice: &Owned, answer: &[InspectPoint]) -> bool {
+    pub fn validate(&self, problem_voice: &Owned, answer: &[InspectPoint]) -> bool {
         let len = problem_voice.len();
         let mut composed = Owned::new();
         for &InspectPoint {
