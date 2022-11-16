@@ -125,3 +125,38 @@ impl Loss {
         composed_norm < threshold
     }
 }
+
+#[test]
+fn validate_e01() -> anyhow::Result<()> {
+    use crate::{load_all_jk, MockRequester, Requester};
+
+    // E01 + E02 + E03 = Q_E01
+    let loss = Loss::new(load_all_jk()?);
+
+    let requester = MockRequester::new(["assets", "sample", "sample_Q_E01"].into_iter().collect());
+    let chunks = requester.get_chunks(1)?;
+    let chunk = &chunks[0];
+
+    assert!(loss.validate(
+        chunk,
+        &[
+            InspectPoint {
+                delay: 0,
+                score: 0,
+                using_voice: CardVoiceIndex::new(0)
+            },
+            InspectPoint {
+                delay: 0,
+                score: 0,
+                using_voice: CardVoiceIndex::new(1)
+            },
+            InspectPoint {
+                delay: 0,
+                score: 0,
+                using_voice: CardVoiceIndex::new(2)
+            }
+        ]
+    ));
+
+    Ok(())
+}
