@@ -82,3 +82,11 @@ impl ops::Sub for Pixel {
         Self(self.0 - rhs.0, self.1 - rhs.1)
     }
 }
+
+impl ops::Mul for Pixel {
+    type Output = Self;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        Self(self.0 * rhs.0, self.1 * rhs.1)
+    }
+}

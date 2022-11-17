@@ -42,7 +42,7 @@ impl Owned {
 
     #[inline]
     pub fn squared(&self) -> impl Iterator<Item = u64> + '_ {
-        self.vec.iter().map(|px| px.as_u64()).map(|x| x * x)
+        self.vec.iter().map(|&x| x * x).map(|px| px.as_u64())
     }
 
     #[inline]
