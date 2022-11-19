@@ -1,6 +1,6 @@
 //! From: https://judge.yosupo.jp/problem/convolution_mod
 
-use crate::audio_vec::owned::Owned;
+use crate::audio_vec::owned::{pixel::Pixel, Owned};
 
 use super::Ntt;
 
@@ -15,7 +15,10 @@ fn convolution1() {
     let ntt2 = Ntt::new();
     let out = a_audio.convolution(&b_audio, (&ntt1, &ntt2));
 
-    let expected = vec![5, 16, 34, 60, 70, 70, 59, 36];
+    let expected: Vec<_> = [5, 16, 34, 60, 70, 70, 59, 36]
+        .into_iter()
+        .map(Pixel::from_unsigned)
+        .collect();
     assert_eq!(out, expected);
 }
 
@@ -30,7 +33,7 @@ fn convolution2() {
     let ntt2 = Ntt::new();
     let out = a_audio.convolution(&b_audio, (&ntt1, &ntt2));
 
-    let expected = vec![100000000000000];
+    let expected = vec![Pixel::from_unsigned(100000000000000)];
     assert_eq!(out, expected);
 }
 
@@ -54,12 +57,12 @@ fn convolution3() {
     assert_eq!(out, ugly_convolution(&a_audio, &b_audio));
 }
 
-fn ugly_convolution(a: &Owned, b: &Owned) -> Vec<u64> {
+fn ugly_convolution(a: &Owned, b: &Owned) -> Vec<Pixel> {
     let len = a.len() + b.len() - 1;
-    let mut res = vec![0; len];
+    let mut res = vec![Pixel::default(); len];
     for (i, &left) in a.vec.iter().enumerate() {
         for (j, &right) in b.vec.iter().enumerate() {
-            res[i + j] += left.convolution(right);
+            res[i + j] += left * right;
         }
     }
     res

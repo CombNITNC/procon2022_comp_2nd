@@ -78,7 +78,7 @@ impl<const MOD: u32> Ntt<MOD> {
             }
             window_width *= 2;
         }
-        let inv_vec_len = ModInt::new(vec_len as u32).inv();
+        let inv_vec_len = ModInt::new(vec_len as u64).inv();
         for elem in &mut vec[..] {
             *elem *= inv_vec_len;
         }
@@ -131,7 +131,7 @@ fn primitive_root<const MOD: u32>(modulo: u32) -> ModInt<MOD> {
                 continue 'find;
             }
         }
-        return ModInt::new(primitive_root as u32);
+        return ModInt::new(primitive_root);
     }
     unreachable!()
 }

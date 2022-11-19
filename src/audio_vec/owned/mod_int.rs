@@ -66,8 +66,8 @@ impl<const MOD: u32> From<ModInt<MOD>> for u32 {
 
 impl<const MOD: u32> ModInt<MOD> {
     #[inline]
-    pub fn new(n: u32) -> Self {
-        Self(Self::reduce(n as u64 * Self::R2 as u64))
+    pub fn new(n: u64) -> Self {
+        Self(Self::reduce(n * Self::R2 as u64))
     }
 
     #[inline]
@@ -107,28 +107,18 @@ impl<const MOD: u32> ModInt<MOD> {
         debug_assert!(ret < modulo);
         ret as u32
     }
-}
 
-macro_rules! impl_from_for_mod_int {
-    ($t:ty) => {
-        impl<const MOD: u32> From<$t> for ModInt<MOD> {
-            #[inline]
-            fn from(x: $t) -> Self {
-                Self::new(x as u32)
-            }
-        }
-        impl<const MOD: u32> From<&'_ $t> for ModInt<MOD> {
-            #[inline]
-            fn from(&x: &'_ $t) -> Self {
-                Self::new(x as u32)
-            }
-        }
-    };
+    #[inline]
+    pub fn clamp(self, min: i64, max: i64) -> Self {
+        debug_assert!(min < max);
+        // Clipped into the range:
+        // -----|       |       |-----
+        //     max     mid     min
+        // <-- Less          Greater -->
+        let mid = MOD / 2;
+        todo!()
+    }
 }
-
-impl_from_for_mod_int!(u64);
-impl_from_for_mod_int!(u32);
-impl_from_for_mod_int!(i32);
 
 impl<const MOD: u32> std::ops::Add for ModInt<MOD> {
     type Output = Self;

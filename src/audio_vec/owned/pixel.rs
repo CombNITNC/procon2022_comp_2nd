@@ -42,7 +42,7 @@ impl Pixel {
 
     #[inline]
     #[cfg(test)]
-    pub fn from_unsigned(value: u32) -> Self {
+    pub fn from_unsigned(value: u64) -> Self {
         Self(ModInt::new(value), ModInt::new(value))
     }
 
@@ -62,8 +62,8 @@ impl Pixel {
     }
 
     #[inline]
-    pub fn convolution(self, other: Self) -> u64 {
-        garner(self.0 * other.0, self.1 * other.1)
+    pub fn clamp(self, min: i64, max: i64) -> Self {
+        Self(self.0.clamp(min, max), self.1.clamp(min, max))
     }
 }
 
@@ -72,6 +72,13 @@ impl ops::Add for Pixel {
 
     fn add(self, rhs: Self) -> Self::Output {
         Self(self.0 + rhs.0, self.1 + rhs.1)
+    }
+}
+
+impl ops::AddAssign for Pixel {
+    fn add_assign(&mut self, rhs: Self) {
+        self.0 = self.0 + rhs.0;
+        self.1 = self.1 + rhs.1;
     }
 }
 
@@ -88,5 +95,12 @@ impl ops::Mul for Pixel {
 
     fn mul(self, rhs: Self) -> Self::Output {
         Self(self.0 * rhs.0, self.1 * rhs.1)
+    }
+}
+
+impl std::iter::Sum for Pixel {
+    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+        use ops::Add;
+        iter.fold(Default::default(), Pixel::add)
     }
 }

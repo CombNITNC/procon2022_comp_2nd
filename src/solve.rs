@@ -57,7 +57,7 @@ impl Loss {
             (&self.ntt.0, &self.ntt.1),
         );
         let stride = (self.card_voices[&using_voice].len() - problem_voice.len()) as isize;
-        let squared_norm = problem_voice.squared_norm();
+        let squared_norm = problem_voice.squared_norm().as_u64();
 
         let mut min_score = u64::MAX;
         let mut min_delay = 0;
@@ -75,12 +75,13 @@ impl Loss {
             let convolution_at = (0 <= delay)
                 .then(|| convolution.get(delay as usize).copied())
                 .flatten()
-                .unwrap_or(0);
-            let score = squared_norm - 2 * convolution_at
+                .unwrap_or_default();
+            let score = squared_norm - 2 * convolution_at.as_u64()
                 + self
                     .precalc
                     .get(using_voice, (problem_voice.len() as isize) - delay - 1)
-                - self.precalc.get(using_voice, -delay - 1);
+                    .as_u64()
+                - self.precalc.get(using_voice, -delay - 1).as_u64();
             if score < min_score {
                 min_score = score;
                 min_delay = delay;
@@ -116,9 +117,10 @@ impl Loss {
 
         let composed_norm = problem_voice
             .clone()
-            .sub(composed.clip())
+            .sub(composed.clip(len))
             .to_owned(len)
             .squared_norm()
+            .as_u64()
             / len as u64;
         info!("validation : score of {answer:?} is\n\t{composed_norm:?}");
         let threshold = 10;

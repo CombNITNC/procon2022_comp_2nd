@@ -1,4 +1,4 @@
-use cast::i64;
+use cast::usize;
 
 use super::{owned::pixel::Pixel, AudioVec};
 
@@ -53,13 +53,16 @@ impl<T: AudioVec> AudioVec for Flipped<T> {
 #[derive(Debug)]
 pub struct Clipped<T> {
     pub(super) vec: T,
+    pub(super) len: usize,
 }
 
 impl<T: AudioVec> AudioVec for Clipped<T> {
     fn get(&self, index: isize) -> Pixel {
-        self.vec.get(index).clamp(
-            Pixel::from_signed(i64(i16::MIN)),
-            Pixel::from_signed(i64(i16::MAX)),
-        )
+        if !usize(index).map_or(false, |index| (0..self.len).contains(&index)) {
+            return Default::default();
+        }
+        let min = i16::MIN as i64;
+        let max = i16::MAX as i64;
+        self.vec.get(index).clamp(min, max)
     }
 }

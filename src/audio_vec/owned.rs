@@ -41,12 +41,12 @@ impl Owned {
     }
 
     #[inline]
-    pub fn squared(&self) -> impl Iterator<Item = u64> + '_ {
-        self.vec.iter().map(|&x| x * x).map(|px| px.as_u64())
+    pub fn squared(&self) -> impl Iterator<Item = Pixel> + '_ {
+        self.vec.iter().map(|&x| x * x)
     }
 
     #[inline]
-    pub fn squared_norm(&self) -> u64 {
+    pub fn squared_norm(&self) -> Pixel {
         self.squared().sum()
     }
 
@@ -55,7 +55,7 @@ impl Owned {
         &self,
         other: &Self,
         (ntt1, ntt2): (&Ntt<924844033>, &Ntt<998244353>),
-    ) -> Vec<u64> {
+    ) -> Vec<Pixel> {
         if self.is_empty() && other.is_empty() {
             return vec![];
         }
@@ -63,10 +63,10 @@ impl Owned {
         let len = self.len() + other.len() - 1;
         if self.len().min(other.len()) <= 40 {
             // too tiny vectors
-            let mut res = vec![0; len];
+            let mut res = vec![Pixel::default(); len];
             for (i, &left) in self.vec.iter().enumerate() {
                 for (j, &right) in other.vec.iter().enumerate() {
-                    res[i + j] += left.convolution(right);
+                    res[i + j] += left * right;
                 }
             }
             return res;
@@ -106,7 +106,6 @@ impl Owned {
             .map(|(a, b)|
                 // SAFETY: この内部表現は同じ畳み込み演算の結果であり、整合性が保たれている。
             unsafe { Pixel::from_inner((a, b)) })
-            .map(|px| px.as_u64())
             .collect()
     }
 }
@@ -132,7 +131,7 @@ impl Owned {
 
     #[inline]
     #[cfg(test)]
-    pub fn from_raw_slice(slice: &[u32]) -> Self {
+    pub fn from_raw_slice(slice: &[u64]) -> Self {
         Self {
             vec: slice.iter().copied().map(Pixel::from_unsigned).collect(),
         }

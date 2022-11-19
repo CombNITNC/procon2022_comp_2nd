@@ -44,11 +44,11 @@ pub trait AudioVec {
         composite::Flipped { vec: self }
     }
 
-    fn clip(self) -> composite::Clipped<Self>
+    fn clip(self, len: usize) -> composite::Clipped<Self>
     where
         Self: Sized,
     {
-        composite::Clipped { vec: self }
+        composite::Clipped { vec: self, len }
     }
 
     fn to_owned(&self, len: usize) -> Owned {
